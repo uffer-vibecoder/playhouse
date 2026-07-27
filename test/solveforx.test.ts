@@ -4,6 +4,7 @@ import {
   PROBLEMS,
   backspace,
   check,
+  clear,
   generate,
   initialState,
   isRight,
@@ -12,6 +13,8 @@ import {
   rightCount,
   shareGrid,
   step,
+  toSave,
+  recordFirstScore,
   toggleSign,
   typeDigit,
   type Problem,
@@ -205,4 +208,69 @@ test("the archive's seeds are all distinct", async () => {
   const seeds = new Set((archive as Puzzle[]).map((p) => p.seed));
   assert.equal(seeds.size, (archive as Puzzle[]).length);
   assert.ok(seeds.size > 0);
+});
+
+/* ── the first attempt ───────────────────────────────────────────────────── */
+
+test("the first attempt's score is recorded once every row is answered", () => {
+  const problems = generate(puz(21));
+  let s = initialState();
+  problems.forEach((p, i) => {
+    // get one deliberately wrong, so this is not just the perfect case
+    s = enter({ ...s, cursor: i }, String(i === 3 ? p.x + 1 : p.x));
+    s = recordFirstScore(problems, s);
+    if (i < PROBLEMS - 1) {
+      assert.equal(s.firstScore, null, `closed at row ${i} with rows still blank`);
+    }
+  });
+  assert.equal(s.firstScore, PROBLEMS - 1);
+});
+
+test("a wrong-but-complete attempt still counts as an attempt", () => {
+  // averaging only successful attempts would flatter the number
+  const problems = generate(puz(22));
+  let s = initialState();
+  problems.forEach((_, i) => {
+    s = enter({ ...s, cursor: i }, "0");
+  });
+  s = recordFirstScore(problems, s);
+  assert.notEqual(s.firstScore, null);
+});
+
+test("replaying a set never changes the first score", () => {
+  const problems = generate(puz(23));
+  let s = initialState();
+  problems.forEach((p, i) => {
+    s = enter({ ...s, cursor: i }, String(p.x + 1)); // all wrong
+  });
+  s = recordFirstScore(problems, s);
+  const first = s.firstScore;
+  assert.equal(first, 0);
+
+  s = clear(s); // redo
+  assert.equal(s.firstScore, first, "clearing must not erase the first attempt");
+  problems.forEach((p, i) => {
+    s = enter({ ...s, cursor: i }, String(p.x)); // now all right
+    s = recordFirstScore(problems, s);
+  });
+  assert.equal(s.firstScore, first, "a perfect replay must not overwrite it");
+  assert.equal(rightCount(problems, s), PROBLEMS, "the replay itself did score ten");
+});
+
+test("a first score survives a save and restore", () => {
+  const problems = generate(puz(24));
+  let s = initialState();
+  problems.forEach((p, i) => {
+    s = enter({ ...s, cursor: i }, String(p.x));
+    s = recordFirstScore(problems, s);
+  });
+  const restored = initialState(toSave(s));
+  assert.equal(restored.firstScore, PROBLEMS);
+});
+
+test("a nonsense first score in a save is discarded", () => {
+  for (const bad of [-1, 99, 3.5, "seven" as unknown as number]) {
+    const s = initialState({ answers: [], firstScore: bad });
+    assert.equal(s.firstScore, null, `accepted ${bad}`);
+  }
 });

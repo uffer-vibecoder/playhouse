@@ -37,6 +37,8 @@ export type State = {
   cursor: number;
   /** Marked by Check, cleared shortly after. */
   wrong: Set<number>;
+  /** The score of the first completed attempt, once there has been one. */
+  firstScore: number | null;
 };
 
 export const PROBLEMS = 10;
@@ -147,15 +149,45 @@ export function render(p: Problem): string {
 
 /* ── state ──────────────────────────────────────────────────────────────── */
 
-/** What gets persisted: the typed answers, nothing else. */
-export type Saved = { answers: string[] };
+/**
+ * What gets persisted: the typed answers, and the score of the first attempt.
+ *
+ * `firstScore` exists because a set is redoable and this save is mutable —
+ * replaying overwrites the answers, so the first attempt is gone the moment
+ * someone tries again. The dashboard averages *first* attempts, and no later
+ * migration can recover a number that was never written down, so it has to be
+ * recorded as it happens.
+ */
+export type Saved = { answers: string[]; firstScore?: number };
 
 export function initialState(restored?: Saved): State {
   const answers = Array.from({ length: PROBLEMS }, (_, i) => {
     const v = restored?.answers?.[i];
     return typeof v === "string" && /^-?\d{0,4}$/.test(v) ? v : "";
   });
-  return { answers, cursor: 0, wrong: new Set() };
+  const first = restored?.firstScore;
+  return {
+    answers,
+    cursor: 0,
+    wrong: new Set(),
+    firstScore:
+      typeof first === "number" && Number.isInteger(first) && first >= 0 && first <= PROBLEMS
+        ? first
+        : null,
+  };
+}
+
+/**
+ * Close off the first attempt once every row has been answered.
+ *
+ * "Answered", not "correct" — an attempt where two were wrong still happened,
+ * and averaging only successful attempts would flatter the number. Once set it
+ * never changes again, whatever a replay scores.
+ */
+export function recordFirstScore(problems: Problem[], s: State): State {
+  if (s.firstScore !== null) return s;
+  if (s.answers.some((a) => a.trim() === "")) return s;
+  return { ...s, firstScore: rightCount(problems, s) };
 }
 
 const replace = (xs: string[], i: number, v: string) =>
@@ -191,8 +223,15 @@ export function moveTo(s: State, i: number): State {
 export const step = (s: State, by: number): State =>
   moveTo(s, (s.cursor + by + PROBLEMS) % PROBLEMS);
 
-export function clear(): State {
-  return initialState();
+/**
+ * Wipe the answers but keep the first attempt's score.
+ *
+ * Clearing is a redo, and a redo is exactly the case `firstScore` exists to
+ * survive — returning a bare `initialState()` here would erase the number the
+ * moment anyone tried again, which is the failure it was added to prevent.
+ */
+export function clear(s: State): State {
+  return { ...initialState(), firstScore: s.firstScore };
 }
 
 /* ── checking ───────────────────────────────────────────────────────────── */
@@ -219,7 +258,10 @@ export const rightCount = (problems: Problem[], s: State) =>
 export const isSolvedPuzzle = (problems: Problem[], s: State) =>
   rightCount(problems, s) === problems.length;
 
-export const toSave = (s: State): Saved => ({ answers: s.answers });
+export const toSave = (s: State): Saved =>
+  s.firstScore === null
+    ? { answers: s.answers }
+    : { answers: s.answers, firstScore: s.firstScore };
 
 /**
  * The shareable result — how many landed, and which ones, never the answers.

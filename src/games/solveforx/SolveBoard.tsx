@@ -12,6 +12,7 @@ import {
   isRight,
   isSolvedPuzzle,
   moveTo,
+  recordFirstScore,
   render,
   rightCount,
   shareGrid,
@@ -104,11 +105,24 @@ export default function SolveBoard({
     return () => clearTimeout(id);
   }, [state.wrong]);
 
-  const press = useCallback((k: string) => {
-    if (k === "⌫") setState(backspace);
-    else if (k === "−") setState(toggleSign);
-    else setState((s) => typeDigit(s, k));
-  }, []);
+  /**
+   * Every edit goes through here, and every edit closes off the first attempt
+   * once all ten rows carry an answer.
+   *
+   * Recording it as part of the edit rather than in an effect watching the
+   * answers keeps it pure, and means no entry path can forget — there are two
+   * of them, the keypad and the physical keyboard.
+   */
+  const edit = useCallback(
+    (fn: (s: State) => State) => setState((s) => recordFirstScore(problems, fn(s))),
+    [problems]
+  );
+
+  const press = useCallback(
+    (k: string) =>
+      edit((s) => (k === "⌫" ? backspace(s) : k === "−" ? toggleSign(s) : typeDigit(s, k))),
+    [edit]
+  );
 
   /* physical keyboard */
   useEffect(() => {
@@ -117,11 +131,11 @@ export default function SolveBoard({
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) return;
       if (/^\d$/.test(e.key)) {
-        setState((s) => typeDigit(s, e.key));
+        edit((s) => typeDigit(s, e.key));
       } else if (e.key === "-") {
-        setState(toggleSign);
+        edit(toggleSign);
       } else if (e.key === "Backspace" || e.key === "Delete") {
-        setState(backspace);
+        edit(backspace);
       } else if (e.key === "ArrowDown" || e.key === "Enter") {
         setState((s) => step(s, 1));
       } else if (e.key === "ArrowUp") {
@@ -131,7 +145,7 @@ export default function SolveBoard({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [edit]);
 
   const runCheck = () => {
     setChecked(true);
@@ -232,7 +246,7 @@ export default function SolveBoard({
         <button
           className="tool"
           onClick={() => {
-            setState(clear());
+            setState((st) => clear(st));
             setChecked(false);
           }}
         >
