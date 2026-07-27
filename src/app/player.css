@@ -128,7 +128,11 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   padding:6px 14px; border-radius:999px; border:2px solid var(--ink);
   background:transparent; color:var(--ink); cursor:pointer;
 }
-.tab[aria-selected="true"]{background:var(--accent); border-color:var(--accent)}
+/* aria-current, not aria-selected: these are links-in-a-set, not tabs in a
+   tablist, and aria-selected is only meaningful inside one. This read
+   aria-selected for a long time while the component emitted aria-current, so
+   the puzzle you were on never actually highlighted. */
+.tab[aria-current="true"]{background:var(--accent); border-color:var(--accent)}
 
 /* grid — 13 x 43px on a 1px #111 lattice inside a 3px #111 border */
 .gridwrap{container-type:inline-size; width:100%; max-width:577px; margin:0 auto; position:relative}
@@ -319,11 +323,23 @@ footer{
   @page{size:letter portrait; margin:14mm}
   html,body{background:#FFFFFF}
   body{padding:0; display:block; print-color-adjust:exact; -webkit-print-color-adjust:exact}
-  /* the sheet is the paper now — drop the surround treatment entirely */
-  .wrap{max-width:none; padding:0; border-radius:0; box-shadow:none; background:#FFFFFF}
+  /* The sheet is the paper now — drop the surround treatment entirely.
+     This targeted `.wrap` for a long time, a class that no longer exists, so
+     printing from dark mode kept the dark padding, radius and shadow. */
+  .sheet{max-width:none; padding:0; border-radius:0; box-shadow:none; background:#FFFFFF}
   .pad,.tools,.win,.bloomlayer,.petal{display:none !important}
-  /* the picker is navigation; the rest are folded open by the print handler */
-  #pickerbox,#howbox{display:none !important}
+  /* Navigation and instructions are screen furniture. This used to name
+     #pickerbox and #howbox — ids no component has ever set, so both printed. */
+  .noprint{display:none !important}
+
+  /* Folded panels are opened in the DOM before the dialog opens — see
+     src/lib/print.ts. It cannot be done here: a closed <details> is never
+     slotted into its shadow tree, so there is no rendered content for a
+     stylesheet to reveal, whatever it declares. */
+
+  /* the twisty is meaningless on paper, and the summary becomes a heading */
+  .disclosure > summary{list-style:none}
+  .disclosure > summary::-webkit-details-marker{display:none}
   .disclosure{border-top:1.5px solid var(--rule)}
   .disclosure > summary{padding:10px 0 6px; color:var(--muted-3)}
   .disclosure > summary .chev,.disclosure > summary .sum-note{display:none}

@@ -24,6 +24,7 @@ import {
   type State,
 } from "./engine";
 import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "./Celebration";
 
 const GAME_ID = "codeword";
@@ -36,6 +37,8 @@ export default function CodewordBoard({
   onSolved?: (slot: string) => void;
 }) {
   const slots = useMemo(() => buildSlots(puzzle), [puzzle]);
+  // Ctrl-P and the browser's own print command, which never reach our button
+  useEffect(watchBrowserPrint, []);
   const [state, setState] = useState<State>(() => initialState(puzzle, slots));
   const [restoring, setRestoring] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
@@ -174,7 +177,7 @@ export default function CodewordBoard({
         </div>
       )}
 
-      <details className="disclosure">
+      <details className="disclosure noprint">
         <summary>
           <span className="chev" />
           How to play
@@ -256,7 +259,7 @@ export default function CodewordBoard({
         <button className="tool" onClick={() => setState(clear(puzzle, slots))}>
           Clear entries
         </button>
-        <button className="tool" onClick={() => window.print()}>
+        <button className="tool" onClick={printPanelsOpen}>
           Print
         </button>
       </div>
