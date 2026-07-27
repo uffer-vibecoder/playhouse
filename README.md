@@ -31,7 +31,9 @@ solved beforehand is carried up on first sign-in rather than lost.
 To switch it on:
 
 1. Create a project at supabase.com (I cannot create accounts for you).
-2. Run `supabase/migrations/0001_init.sql` in the SQL Editor.
+2. Open `supabase/migrations/0001_init.sql`, copy its **contents**, and paste them
+   into the Supabase SQL Editor (New query → paste → Run). Pasting the file
+   *path* gets you `syntax error at or near "supabase"`.
 3. Copy `.env.local.example` to `.env.local` and fill in the project URL and the
    anon/publishable key from **Project Settings → Data API**.
 4. Under **Authentication → URL Configuration**, add
