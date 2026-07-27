@@ -2,46 +2,56 @@
 @import "./player.css";
 
 /* ── shell ─────────────────────────────────────────────────────────────────
-   The chrome around a game: site header, game library, the sign-in
-   affordance. Built from the same design tokens the puzzle uses, so moving
-   between the library and a game does not feel like changing product.
+   The chrome around a game: the page ground, the library, the sign-in
+   affordance. These tokens exist because the puzzle's palette cannot serve
+   here. A puzzle is printed paper and keeps a fixed dark-on-white palette in
+   every theme and both modes; the shell sits on the page ground, which
+   inverts. Using --ink out here put black text on a near-black ground: 1.05:1,
+   which is to say invisible.
 
-   These tokens exist because the puzzle's palette cannot serve here. A puzzle
-   is printed paper and keeps a fixed dark-on-white palette in both themes; the
-   shell sits directly on the page ground, which inverts. Using --ink out here
-   put black text on a near-black ground: a contrast ratio of 1.05, which is to
-   say invisible. Anything on a white card still uses the fixed palette.
+   THE TWO LAYERS
 
-   Values chosen against measured contrast, not by eye:
-     shell-ink    15.9 : 1 dark   ·  18.9 : 1 light   AAA
-     shell-body   10.2 : 1 dark   ·   8.6 : 1 light   AAA
-     shell-muted   6.7 : 1 dark   ·   5.9 : 1 light   AA
+   Everything below is *themeable* — src/lib/themes.ts writes these onto the
+   root element before first paint. Nothing below is one of the sheet's eight
+   fixed tokens, and a theme is forbidden from emitting those; a themed page
+   and a printed page have to be the same puzzle.
+
+   The values here are Notebook light, the default. They are the fallback for
+   a server render and for a page whose script has not run, so the site is
+   correct rather than unstyled in both cases — not decoration.
 ── */
 :root {
-  --shell-ink: #111111;
-  --shell-body: #514B45;
-  --shell-muted: #6B635C;
-  --shell-rule: #111111;
+  --ground: #FBFBF9;
+  --shell-ink: #14161A;   /* 17.5 : 1 on the ground */
+  --shell-body: #454C52;  /*  8.4 : 1 */
+  --shell-muted: #5F6A6F; /*  5.4 : 1 */
+  --shell-rule: #E2E7E7;
+
+  /* The themed accent. Deliberately NOT --accent: that one belongs to the
+     sheet and never moves. Anything sitting on --fill takes the fixed ink
+     #111111, never --shell-ink — fills are light pastels in both modes, so an
+     inverted shell ink lands near 1.3:1. */
+  --fill: #F5A9C6;
+  --fill-text: #B03A6E;   /*  5.5 : 1 on the ground */
+  --fill-tint: #FDEFF4;
+
+  --ground-bg: repeating-linear-gradient(#FBFBF9 0px, #FBFBF9 31px, #E6EAEA 31px, #E6EAEA 32px);
+  --ground-bg-size: auto;
+  /* The sheet's paper. Only Full Moon in dark mode is allowed to move it. */
+  --paper: #FFFFFF;
 }
+/* Notebook dark, for the same fallback reasons, when the OS asks for it and
+   the script has not yet run. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --shell-ink: #F5EFF1;
-    --shell-body: #CBC0C4;
-    --shell-muted: #A79BA0;
-    --shell-rule: #6E5F64;
+    --ground: #151719;
+    --shell-ink: #F2F4F5;
+    --shell-body: #C9CFD2;
+    --shell-muted: #98A0A4;
+    --shell-rule: #262A2C;
+    --fill-text: #F5A9C6;
+    --ground-bg: repeating-linear-gradient(#151719 0px, #151719 31px, #262A2C 31px, #262A2C 32px);
   }
-}
-:root[data-theme="dark"] {
-  --shell-ink: #F5EFF1;
-  --shell-body: #CBC0C4;
-  --shell-muted: #A79BA0;
-  --shell-rule: #6E5F64;
-}
-:root[data-theme="light"] {
-  --shell-ink: #111111;
-  --shell-body: #514B45;
-  --shell-muted: #6B635C;
-  --shell-rule: #111111;
 }
 
 .shell {
@@ -69,7 +79,7 @@
   color: var(--shell-ink);
   text-decoration: none;
 }
-.wordmark span { color: var(--accent); }
+.wordmark span { color: var(--fill-text); }
 
 .linkish {
   background: none;
@@ -117,7 +127,7 @@
   color: inherit;
   text-decoration: none;
 }
-.gamecard:hover { background: var(--accent-tint); }
+.gamecard:hover { background: var(--fill-tint); }
 .gamecard:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; }
 .gamecard h2 {
   font-family: var(--display);
@@ -145,9 +155,9 @@
   width: 100%;
   margin-top: 14px;
   padding: 16px;
-  border: 1.5px solid var(--accent);
+  border: 1.5px solid var(--fill);
   border-radius: 14px;
-  background: var(--accent-tint);
+  background: var(--fill-tint);
 }
 .dialog h3 {
   font-family: var(--display);

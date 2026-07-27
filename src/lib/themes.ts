@@ -187,6 +187,32 @@ export const wayByName = (name: string) => WAYS.find((w) => w.name === name) ?? 
  * Kept as a plain function with no DOM access so the same code runs in the
  * blocking script that paints the first frame, in React, and in a test.
  */
+/**
+ * Mix one hex colour toward another. `amount` 0 keeps `a`, 1 gives `b`.
+ *
+ * Done here rather than with CSS `color-mix` so the value is deterministic and
+ * testable, and so the blocking script can compute it before any stylesheet has
+ * been consulted.
+ */
+function mix(a: string, b: string, amount: number): string {
+  const parts = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [r1, g1, b1] = parts(a);
+  const [r2, g2, b2] = parts(b);
+  const c = (x: number, y: number) =>
+    Math.round(x + (y - x) * amount)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
+}
+
+/**
+ * Not a taste call: it is the ratio that reproduces the sheet's own pairing.
+ * #F5A9C6 mixed 0.81 toward white lands exactly on #FDEFF4, the fixed
+ * `--accent-tint`, so every theme's wash sits in the same relation to its fill
+ * as the sheet's does to its accent. 0.80 misses green by one step.
+ */
+const TINT_TOWARD_WHITE = 0.81;
+
 export function tokensFor(choice: Choice, resolved: Mode): Record<string, string> {
   const theme = themeByName(choice.theme);
   const pal = resolved === "dark" ? theme.dark : theme.light;
@@ -206,6 +232,7 @@ export function tokensFor(choice: Choice, resolved: Mode): Record<string, string
     "--shell-rule": pal.rule,
     "--fill": fill,
     "--fill-text": accText,
+    "--fill-tint": mix(fill, "#FFFFFF", TINT_TOWARD_WHITE),
     "--ground-bg": resolved === "dark" ? theme.bgDark : theme.bgLight,
     "--ground-bg-size": theme.bgSize,
     // Full Moon in dark mode is the only theme allowed to touch the paper.
