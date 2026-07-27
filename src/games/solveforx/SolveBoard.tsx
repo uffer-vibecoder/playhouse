@@ -298,7 +298,7 @@ export default function SolveBoard({
           arithmetic and a canvas under it would be clutter. */}
       {puzzle.tier && (
         <>
-          <Scratch />
+          <Scratch problem={render(problems[state.cursor])} />
           <Calculator />
         </>
       )}

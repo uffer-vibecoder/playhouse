@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** The sheet's display face, so a copied equation matches the question. */
+const DISPLAY = "Fredoka, system-ui, sans-serif";
+
 /**
  * Somewhere to do the working.
  *
@@ -17,11 +20,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Pointer events rather than mouse and touch separately, so finger, stylus and
  * trackpad are one code path and pressure comes free where the hardware has it.
  */
-export default function Scratch() {
+type Item =
+  | { kind: "stroke"; points: { x: number; y: number }[] }
+  | { kind: "stamp"; text: string; y: number };
+
+export default function Scratch({ problem }: { problem?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
-  /** Each stroke as a list of points, so undo can drop the last one exactly. */
-  const strokes = useRef<{ x: number; y: number }[][]>([]);
+  /**
+   * What is on the paper, in order.
+   *
+   * A stroke is a list of points; a stamp is the equation copied across. They
+   * share one list so undo works the same on both — copying the problem and
+   * then changing your mind is the same gesture as drawing a line you did not
+   * want.
+   */
+  const items = useRef<Item[]>([]);
   const [count, setCount] = useState(0);
 
   const repaint = useCallback(() => {
@@ -30,22 +44,30 @@ export default function Scratch() {
     if (!canvas || !ctx) return;
     const ratio = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
-    // the ink, taken from the sheet rather than the theme: this is paper
-    ctx.strokeStyle = "#111111";
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    for (const stroke of strokes.current) {
-      if (stroke.length < 2) {
-        // a single tap is a dot, and losing it would feel like a dropped input
-        if (stroke.length === 1) {
-          ctx.beginPath();
-          ctx.arc(stroke[0].x, stroke[0].y, 1, 0, Math.PI * 2);
-          ctx.fillStyle = "#111111";
-          ctx.fill();
-        }
+    for (const item of items.current) {
+      if (item.kind === "stamp") {
+        // the equation in the sheet's own display face, so the copy looks like
+        // the question rather than like a caption
+        ctx.fillStyle = "#111111";
+        ctx.font = `600 19px ${DISPLAY}`;
+        ctx.fillText(item.text, 14, item.y);
         continue;
       }
+      const stroke = item.points;
+      // the ink, taken from the sheet rather than the theme: this is paper
+      ctx.strokeStyle = "#111111";
+      if (stroke.length === 1) {
+        // a single tap is a dot, and losing it would feel like a dropped input
+        ctx.beginPath();
+        ctx.arc(stroke[0].x, stroke[0].y, 1, 0, Math.PI * 2);
+        ctx.fillStyle = "#111111";
+        ctx.fill();
+        continue;
+      }
+      if (stroke.length < 2) continue;
       ctx.beginPath();
       ctx.moveTo(stroke[0].x, stroke[0].y);
       for (const p of stroke.slice(1)) ctx.lineTo(p.x, p.y);
@@ -85,14 +107,16 @@ export default function Scratch() {
 
   const down = (e: React.PointerEvent) => {
     drawing.current = true;
-    strokes.current.push([at(e)]);
+    items.current.push({ kind: "stroke", points: [at(e)] });
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-    setCount(strokes.current.length);
+    setCount(items.current.length);
   };
 
   const move = (e: React.PointerEvent) => {
     if (!drawing.current) return;
-    strokes.current[strokes.current.length - 1].push(at(e));
+    const last = items.current[items.current.length - 1];
+    if (last?.kind !== "stroke") return;
+    last.points.push(at(e));
     repaint();
   };
 
@@ -101,23 +125,35 @@ export default function Scratch() {
   };
 
   const undo = () => {
-    strokes.current.pop();
-    setCount(strokes.current.length);
+    items.current.pop();
+    setCount(items.current.length);
     repaint();
   };
 
   const clear = () => {
-    strokes.current = [];
+    items.current = [];
     setCount(0);
+    repaint();
+  };
+
+  /**
+   * Put the equation you are on at the top of the paper.
+   *
+   * Copying it by hand is the first thing anyone does with a multi-step
+   * problem, and getting a sign wrong while transcribing is a way to lose ten
+   * minutes to arithmetic that was never the question. Each copy lands below
+   * the last, so working two problems side by side does not overwrite one.
+   */
+  const copyProblem = () => {
+    if (!problem) return;
+    const stamps = items.current.filter((i) => i.kind === "stamp").length;
+    items.current.push({ kind: "stamp", text: problem, y: 30 + stamps * 30 });
+    setCount(items.current.length);
     repaint();
   };
 
   return (
     <div className="sx-scratch noprint">
-      <div className="sx-scratchhead">
-        <span>Scratch paper</span>
-        <span className="sx-scratchnote">not saved — it goes when you leave</span>
-      </div>
       <canvas
         ref={canvasRef}
         className="sx-canvas"
@@ -128,12 +164,19 @@ export default function Scratch() {
         aria-label="Scratch paper for working out"
       />
       <div className="sx-scratchtools">
+        {problem && (
+          <button className="tool" onClick={copyProblem}>
+            Copy equation
+          </button>
+        )}
         <button className="tool" onClick={undo} disabled={!count}>
           Undo
         </button>
         <button className="tool" onClick={clear} disabled={!count}>
           Clear
         </button>
+        {/* the one thing worth saying, said once */}
+        <span className="sx-scratchnote">not saved</span>
       </div>
     </div>
   );
