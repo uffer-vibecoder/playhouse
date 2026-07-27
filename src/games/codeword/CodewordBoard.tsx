@@ -25,7 +25,7 @@ import {
 } from "./engine";
 import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
-import Celebration from "./Celebration";
+import Celebration from "@/components/Celebration";
 
 const GAME_ID = "codeword";
 

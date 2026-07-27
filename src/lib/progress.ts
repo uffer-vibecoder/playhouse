@@ -15,10 +15,22 @@ import { getSupabase, supabaseConfigured } from "./supabase/client";
  * CW-001 would otherwise restore each other's letters onto different grids.
  */
 
+/**
+ * Codeword's payload: which letter the player has assigned to each code.
+ * Kept as the default so that game's call sites need no type argument.
+ */
 export type Entries = Record<number, string>;
 
-export type SaveRecord = {
-  entries: Entries;
+/**
+ * What a game needs to pick up where it left off.
+ *
+ * The payload is generic because games do not agree on its shape — codeword
+ * stores code-to-letter, the word game stores a list of guesses — while
+ * everything around it (the slot, the solved flag, last-write-wins on
+ * `updatedAt`) is identical. The column is `jsonb`, so this costs no migration.
+ */
+export type SaveRecord<T = Entries> = {
+  entries: T;
   solved: boolean;
   updatedAt: string;
 };
@@ -86,17 +98,17 @@ export const slotKey = (gameId: string, puzzleId: string, fp: string) =>
 
 /* ── local ──────────────────────────────────────────────────────────────── */
 
-function readLocal(slot: string): SaveRecord | null {
+function readLocal<T>(slot: string): SaveRecord<T> | null {
   try {
     ensureMigrated();
     const raw = localStorage.getItem(LOCAL_PREFIX + slot);
-    return raw ? (JSON.parse(raw) as SaveRecord) : null;
+    return raw ? (JSON.parse(raw) as SaveRecord<T>) : null;
   } catch {
     return null; // private mode — solving still works, it just will not persist
   }
 }
 
-function writeLocal(slot: string, rec: SaveRecord) {
+function writeLocal<T>(slot: string, rec: SaveRecord<T>) {
   try {
     localStorage.setItem(LOCAL_PREFIX + slot, JSON.stringify(rec));
   } catch {
@@ -104,8 +116,9 @@ function writeLocal(slot: string, rec: SaveRecord) {
   }
 }
 
-function allLocal(): { slot: string; rec: SaveRecord }[] {
-  const out: { slot: string; rec: SaveRecord }[] = [];
+/** Every local save, whatever game wrote it — so the payload stays opaque here. */
+function allLocal(): { slot: string; rec: SaveRecord<unknown> }[] {
+  const out: { slot: string; rec: SaveRecord<unknown> }[] = [];
   try {
     ensureMigrated();
     for (let i = 0; i < localStorage.length; i++) {
@@ -137,8 +150,8 @@ async function currentUserId(): Promise<string | null> {
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-export async function loadProgress(slot: string): Promise<SaveRecord | null> {
-  const local = readLocal(slot);
+export async function loadProgress<T = Entries>(slot: string): Promise<SaveRecord<T> | null> {
+  const local = readLocal<T>(slot);
   const uid = await currentUserId();
   if (!uid) return local;
 
@@ -152,8 +165,8 @@ export async function loadProgress(slot: string): Promise<SaveRecord | null> {
 
   if (error) console.error("[saves] cloud load failed:", error.message, error);
   if (error || !data) return local;
-  const cloud: SaveRecord = {
-    entries: (data.entries ?? {}) as Entries,
+  const cloud: SaveRecord<T> = {
+    entries: (data.entries ?? {}) as T,
     solved: Boolean(data.solved),
     updatedAt: data.updated_at as string,
   };
@@ -162,13 +175,13 @@ export async function loadProgress(slot: string): Promise<SaveRecord | null> {
   return cloud;
 }
 
-export async function saveProgress(
+export async function saveProgress<T = Entries>(
   slot: string,
   gameId: string,
-  entries: Entries,
+  entries: T,
   solved: boolean
 ): Promise<SaveOutcome> {
-  const rec: SaveRecord = { entries, solved, updatedAt: new Date().toISOString() };
+  const rec: SaveRecord<T> = { entries, solved, updatedAt: new Date().toISOString() };
   writeLocal(slot, rec);
 
   const uid = await currentUserId();

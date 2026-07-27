@@ -238,6 +238,53 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 }
 .tcell.used{background:var(--accent)}
 
+/* ── word game ──────────────────────────────────────────────────────────────
+   The three result states are told apart by FILL, OUTLINE and FADE rather than
+   by hue. Green/yellow/grey is the familiar treatment and it is also the one
+   that fails for red-green colour blindness, where the two states that matter
+   most become the same swatch. Weight and fill survive that, and they let the
+   tiles stay inside the existing palette instead of importing two new colours
+   into a design system that did not ask for them.
+
+   Measured on the white sheet: hit is --ink on --accent (11.4 : 1), near is
+   --ink on white (18.9 : 1), miss is --muted on --tile (4.3 : 1).
+── */
+.wg-wrap{position:relative; margin:14px 0 10px}
+.wg-grid{display:grid; gap:6px; justify-content:center}
+.wg-row{display:grid; grid-template-columns:repeat(5,52px); gap:6px}
+.wg-tile{
+  height:52px; display:grid; place-items:center;
+  font-family:var(--display); font-weight:600; font-size:26px; line-height:1;
+  color:var(--ink); background:#FFFFFF;
+  border:2px solid var(--underline); border-radius:10px;
+  text-transform:uppercase;
+}
+/* typed but not yet submitted — committed to, not yet judged */
+.wg-tile.typed{border-color:var(--ink)}
+/* right letter, right place */
+.wg-tile.hit{background:var(--accent); border-color:var(--accent-deep)}
+/* right letter, wrong place */
+.wg-tile.near{border-color:var(--accent-deep); border-width:3px}
+/* not in the word at all */
+.wg-tile.miss{background:var(--tile); border-color:var(--rule); color:var(--muted)}
+
+.wg-pad{display:grid; gap:6px; margin:12px 0 4px}
+.wg-krow{display:flex; gap:5px; justify-content:center}
+.wg-krow .key{flex:0 0 32px; height:44px; font-size:15px}
+.wg-krow .key.wg-wide{flex:0 0 58px; font-size:11px; letter-spacing:.6px}
+.wg-krow .key.hit{background:var(--accent); border-color:var(--accent-deep)}
+.wg-krow .key.near{border-color:var(--accent-deep); border-width:3px}
+.wg-krow .key.miss{background:var(--tile); border-color:var(--rule); color:var(--muted)}
+.wg-krow .key:disabled{opacity:.55; cursor:default}
+
+@media (max-width:560px){
+  .wg-row{grid-template-columns:repeat(5,46px)}
+  .wg-tile{height:46px; font-size:23px}
+  .wg-krow{gap:4px}
+  .wg-krow .key{flex:1 1 0; min-width:0; height:42px; font-size:14px}
+  .wg-krow .key.wg-wide{flex:0 0 46px; font-size:10px}
+}
+
 /* footer */
 footer{
   border-top:1.5px solid var(--rule); margin-top:20px; padding-top:12px;
@@ -327,7 +374,7 @@ footer{
      This targeted `.wrap` for a long time, a class that no longer exists, so
      printing from dark mode kept the dark padding, radius and shadow. */
   .sheet{max-width:none; padding:0; border-radius:0; box-shadow:none; background:#FFFFFF}
-  .pad,.tools,.win,.bloomlayer,.petal{display:none !important}
+  .pad,.wg-pad,.tools,.win,.bloomlayer,.petal{display:none !important}
   /* Navigation and instructions are screen furniture. This used to name
      #pickerbox and #howbox — ids no component has ever set, so both printed. */
   .noprint{display:none !important}

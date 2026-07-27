@@ -28,7 +28,8 @@ const GAMES: Game[] = [
   // Described by its mechanic rather than named. "Wordle" is a New York Times
   // trademark and this is a public page; the real name is still to be picked.
   {
-    meta: "Next up",
+    href: "/games/wordgame",
+    meta: "120 puzzles",
     title: "Word guessing",
     blurb:
       "Six guesses to find a hidden five-letter word — an archive to work through rather than one a day.",
