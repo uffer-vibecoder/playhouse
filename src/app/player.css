@@ -573,6 +573,76 @@ footer{
    Everything interactive drops away; the on-screen selection does too, so the
    sheet reads as a clean puzzle rather than a screenshot of one in progress.
 ── */
+/* ── colour blocks ───────────────────────────────────────────────────────────
+   Blocks slide out through gates that match them.
+
+   Colour is never the only signal. Every hue carries a shape as well, drawn on
+   the block and repeated on its gate, so the board is playable in greyscale —
+   the same rule the word game's fill-and-outline states follow, and for the
+   same reason. Testing it is easy: turn the saturation off and see if you can
+   still play.
+
+   The four fills are the sheet's fixed palette rather than the theme's. They
+   are the puzzle, not the furniture: a theme that recoloured them would be
+   changing which block fits which gate.
+── */
+/* room for the gates, which sit astride the wall rather than inside it */
+.cb-wrap{position:relative; margin:16px 0 10px; padding:16px 0}
+.cb-board{
+  container-type:inline-size;
+  position:relative; width:100%; max-width:var(--board); margin:0 auto;
+  background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+}
+.cb-cells{position:absolute; inset:0; display:grid; opacity:.55}
+.cb-cell{border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.cb-cell:nth-child(1n){box-sizing:border-box}
+
+.cb-block{
+  position:absolute; margin:0; padding:0; cursor:grab; z-index:2;
+  display:grid; place-items:center;
+  border:2px solid var(--ink); border-radius:9px;
+  /* the cell is the unit, so the gap has to come out of the block rather than
+     out of the grid — otherwise a 3-long block is not three cells long */
+  transform:scale(.94);
+  transition:left .16s cubic-bezier(.2,.8,.3,1), top .16s cubic-bezier(.2,.8,.3,1);
+  touch-action:none;   /* the drag is ours, not the page's */
+}
+.cb-block:active{cursor:grabbing}
+.cb-block.on{outline:2.5px solid var(--ink); outline-offset:2px}
+.cb-block:focus-visible{outline:2.5px solid var(--accent-deep); outline-offset:2px}
+
+.cb-glyph{font-size:clamp(11px, 4cqw, 20px); line-height:1; color:var(--ink)}
+
+/* A gate is a mouth in the wall: it sits astride the border rather than beside
+   it, so it reads as a way out rather than as decoration. */
+.cb-gate{position:absolute; z-index:1; display:grid; place-items:center; border:2px solid var(--ink)}
+.cb-gate .cb-glyph{font-size:clamp(8px, 2.6cqw, 13px)}
+.cb-top{top:-13px; height:13px; border-bottom:0; border-radius:6px 6px 0 0}
+.cb-bottom{bottom:-13px; height:13px; border-top:0; border-radius:0 0 6px 6px}
+.cb-left{left:-13px; width:13px; border-right:0; border-radius:6px 0 0 6px}
+.cb-right{right:-13px; width:13px; border-left:0; border-radius:0 6px 6px 0}
+
+/* Fixed, not themed: which block fits which gate is the puzzle. Every one is
+   measured against --ink, which is what the glyph and the border take. */
+.hue-rose{background:#F7C9D8}   /* 12.6 : 1 */
+.hue-sage{background:#CFE0C8}   /* 13.9 : 1 */
+.hue-sky{background:#C7DAEE}    /* 13.4 : 1 */
+.hue-sand{background:#F0DFB8}   /* 14.6 : 1 */
+
+/* the keyboard and screen-reader path — the drag is the nice way, not the only one */
+.cb-nudge{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-top:12px}
+.cb-nudgelabel{font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted)}
+.cb-nudge .tool{text-transform:capitalize}
+
+@media (max-width:560px){
+  .cb-top,.cb-bottom{height:10px; top:auto}
+  .cb-top{top:-10px}
+  .cb-bottom{bottom:-10px}
+  .cb-left,.cb-right{width:10px}
+  .cb-left{left:-10px}
+  .cb-right{right:-10px}
+}
+
 /* ── bigger on a bigger screen ──────────────────────────────────────────────
    The measure grows in two steps (see globals.css) and the codeword grid and
    the tile board follow it on their own, because both are sized from their

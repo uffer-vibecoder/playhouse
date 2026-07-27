@@ -24,6 +24,7 @@ import wordgame from "@/data/wordgame.json";
 import solveforx from "@/data/solveforx.json";
 import slide from "@/data/slide.json";
 import cryptogram from "@/data/cryptogram.json";
+import blocks from "@/data/blocks.json";
 
 /**
  * The record — design 2c.
@@ -43,12 +44,22 @@ type CW = { id: string; theme?: string; grid: number[][]; key: string };
 type Seeded = { id: string; seed: number };
 type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
+type BL = { id: string; blocks: { x: number; y: number; w: number; h: number }[]; gates: { edge: string; at: number; len: number; hue: string }[] };
 
 const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
 const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answer));
 const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]], String(p.seed)));
 const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
 const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
+const blSlot = (p: BL) =>
+  slotKey(
+    "blocks",
+    p.id,
+    fingerprint(
+      p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
+      p.gates.map((g) => `${g.edge}${g.at}${g.len}${g.hue}`).join("|")
+    )
+  );
 
 export default function Record() {
   const [games, setGames] = useState<GameRecord[] | null>(null);
@@ -58,12 +69,13 @@ export default function Record() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, wgSaves, sxSaves] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, wgSaves, sxSaves] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
         loadSolvedSet("slide"),
         loadSolvedSet("cryptogram"),
+        loadSolvedSet("blocks"),
         loadGameSaves<{ guesses?: string[] }>("wordgame"),
         loadGameSaves<{ firstScore?: number }>("solveforx"),
       ]);
@@ -75,16 +87,17 @@ export default function Record() {
         solveRecord("03", solveforx as Seeded[], sxSaves, (p) => sxSlot(p as Seeded), 10),
         simpleRecord("slide", "04", "Sliding Tiles", slide as Seeded[], sl, (p) => slSlot(p as Seeded)),
         simpleRecord("cryptogram", "05", "Cryptogram", cryptogram as CG[], cg, (p) => cgSlot(p as CG)),
-        draftRecord("wordtray", "06", "Word Tray", "in draft — the letters are the clue"),
-        draftRecord("sudoku", "07", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
+        simpleRecord("blocks", "06", "Colour Blocks", blocks as BL[], bl, (p) => blSlot(p as BL)),
+        draftRecord("wordtray", "07", "Word Tray", "in draft — the letters are the clue"),
+        draftRecord("sudoku", "08", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
       ]);
 
-      const finished = cw.size + wg.size + sx.size + sl.size + cg.size;
+      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size;
       // No times exist yet, so every finish is untimed. Passing an empty array
       // rather than faking one keeps the average null instead of 0:00.
       setPlayer(playerRecord(finished, []));
 
-      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg]);
+      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl]);
       setBadges(
         stamps(
           [
@@ -93,6 +106,7 @@ export default function Record() {
             { id: "solveforx", name: "Solve for X", puzzles: solveforx as Seeded[], slotOf: (p) => sxSlot(p as Seeded) },
             { id: "slide", name: "Sliding Tiles", puzzles: slide as Seeded[], slotOf: (p) => slSlot(p as Seeded) },
             { id: "cryptogram", name: "Cryptogram", puzzles: cryptogram as CG[], slotOf: (p) => cgSlot(p as CG) },
+            { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
           ],
           solvedAll
         )
