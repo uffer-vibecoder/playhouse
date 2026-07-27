@@ -254,6 +254,54 @@ export async function mergeLocalIntoCloud(gameId: string): Promise<number> {
   return rows.length;
 }
 
+/**
+ * Every save this player has for one game, keyed by slot.
+ *
+ * The picker only ever needs to know *which* puzzles are finished, but the
+ * dashboard needs what is inside them — the guesses used, the answers scored —
+ * so this returns the records themselves. The payload stays opaque here; each
+ * game knows how to read its own.
+ *
+ * Local and cloud are merged with the same last-write-wins rule `loadProgress`
+ * uses, so a player who has been on two devices sees one coherent record
+ * rather than whichever store answered.
+ */
+export async function loadGameSaves<T = unknown>(
+  gameId: string
+): Promise<Map<string, SaveRecord<T>>> {
+  const out = new Map<string, SaveRecord<T>>();
+  for (const { slot, rec } of allLocal()) {
+    if (slot.startsWith(gameId + ":")) out.set(slot, rec as SaveRecord<T>);
+  }
+
+  const uid = await currentUserId();
+  if (!uid) return out;
+
+  const sb = getSupabase()!;
+  const { data, error } = await sb
+    .from("game_progress")
+    .select("slot, entries, solved, updated_at")
+    .eq("user_id", uid)
+    .eq("game_id", gameId);
+
+  if (error) {
+    console.error("[saves] reading the record failed:", error.message, error);
+    return out;
+  }
+
+  for (const row of data ?? []) {
+    const slot = row.slot as string;
+    const cloud: SaveRecord<T> = {
+      entries: (row.entries ?? {}) as T,
+      solved: Boolean(row.solved),
+      updatedAt: row.updated_at as string,
+    };
+    const local = out.get(slot);
+    if (!local || cloud.updatedAt >= local.updatedAt) out.set(slot, cloud);
+  }
+  return out;
+}
+
 /** Which puzzles are finished, for the picker. */
 export async function loadSolvedSet(gameId: string): Promise<Set<string>> {
   const solved = new Set<string>();
