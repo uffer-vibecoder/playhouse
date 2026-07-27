@@ -103,58 +103,163 @@
 .linkish:hover { color: var(--shell-ink); }
 .linkish:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; }
 
-/* home */
-.hero { padding: 8px 0 22px; border-bottom: 3px solid var(--shell-rule); }
-.hero h1 {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 40px;
-  line-height: 1.02;
-  letter-spacing: -0.5px;
-  margin: 0;
-  text-wrap: balance;
-  color: var(--shell-ink);
+/* ── the contents page (design 6a, 6b on a phone) ───────────────────────────
+   A volume's contents, not a menu. The spine and its holes are shell chrome
+   shared with the record — they are not part of any theme, which is why they
+   take --shell-rule rather than a fill.
+
+   The entry number is structural rather than decorative: it is how a game is
+   found again, so the index never reorders and new games append to the bottom.
+── */
+.page { display: flex; gap: 0; max-width: 940px; margin: 0 auto; }
+
+.spine {
+  flex: 0 0 76px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34px 0;
+  gap: 26px;
+  border-right: 1.5px solid var(--fill);
 }
-.hero p {
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--shell-body);
-  max-width: 46ch;
-  margin: 12px 0 0;
+.spine .hole {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--shell-rule);
+  background: var(--ground);
+}
+.spine .volume {
+  margin-top: auto;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 10px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--shell-muted);
 }
 
-.games { display: grid; gap: 12px; margin-top: 22px; }
-.gamecard {
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: #fff;
-  color: inherit;
+.sheetless { flex: 1 1 auto; min-width: 0; padding: 20px 16px 56px 26px; }
+
+.strap {
+  margin: 14px 0 0;
+  max-width: 52ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--shell-body);
+}
+
+/* carry on — the hero, and only present when there is something to carry on
+   with. An empty state dressed as a call to action is worse than no rail. */
+.carry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--fill);
+  border-radius: 12px;
+  background: var(--fill-tint);
   text-decoration: none;
 }
-.gamecard:hover { background: var(--fill-tint); }
-.gamecard:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; }
-.gamecard h2 {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 22px;
-  margin: 0;
-}
-.gamecard p { font-size: 12px; line-height: 1.5; color: var(--body); margin: 0; max-width: 44ch; }
-/* cards are always white, so these keep the fixed palette — but --muted-3
-   measured 3.03 : 1 here, which fails even in light mode at 10px */
-.gamecard .meta {
+/* on --fill-tint, so the fixed ink rather than the shell's — see the note at
+   the top of this file */
+.carry .carrylabel { font-family: var(--display); font-weight: 600; font-size: 15px; color: #111111; }
+.carry .carrywhat { font-size: 12px; color: #4A4A4A; }
+.carry:hover { border-color: var(--fill-text); }
+.carry:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; }
+
+.cols { display: grid; grid-template-columns: minmax(0,1fr) 216px; gap: 30px; margin-top: 26px; align-items: start; }
+
+.colhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--shell-rule);
   font-size: 10px;
-  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--shell-muted);
+}
+.colhead span:first-child { font-weight: 700; color: var(--shell-ink); }
+
+.tocentry {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 15px 4px;
+  border-bottom: 1.5px solid var(--shell-rule);
+  text-decoration: none;
+  color: inherit;
+}
+.tocentry:hover { background: var(--fill-tint); }
+.tocentry:hover .tocname { color: var(--fill-text); }
+.tocentry:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.tocnum {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--shell-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tocbody { display: grid; gap: 5px; min-width: 0; }
+.tocname { font-family: var(--display); font-weight: 600; font-size: 20px; color: var(--shell-ink); }
+.tocblurb { font-size: 12px; line-height: 1.5; color: var(--shell-body); max-width: 52ch; }
+.toccount {
+  font-size: 10px;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: #6B635C;
+  color: var(--shell-muted);
+  white-space: nowrap;
 }
-.gamecard.soon { border-style: dashed; border-color: var(--underline); cursor: default; }
-.gamecard.soon h2 { color: var(--muted); }
-.gamecard.soon:hover { background: #fff; }
+.toccol { display: grid; gap: 6px; justify-items: end; align-content: start; }
+.tocopen { font-size: 11px; color: var(--fill-text); white-space: nowrap; }
+
+.tocpips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 2px; }
+.pip { width: 7px; height: 7px; border-radius: 50%; border: 1.2px solid var(--shell-rule); }
+.pip.on { background: var(--fill); border-color: var(--fill); }
+.tocdone { margin-left: 6px; font-size: 10px; color: var(--shell-muted); }
+
+/* only the rule below it, not a box: `border-style` alone would paint all
+   four sides, because border-width's initial value is `medium` and it collapses
+   to zero only while the style is `none` */
+.tocentry.draft { border-bottom-style: dashed; opacity: .78; }
+.tocentry.draft .tocname { color: var(--shell-muted); }
+.tocentry.draft:hover { background: none; }
+
+.tocnote { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--shell-muted); }
+
+.rail { display: grid; gap: 6px; padding: 16px; border: 1.5px solid var(--shell-rule); border-radius: 12px; }
+.railhead {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--shell-ink);
+}
+.railhead.stampstop { margin-top: 16px; padding-top: 14px; border-top: 1.5px solid var(--shell-rule); }
+.railtitle { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--shell-ink); }
+.railnote { margin: 0; font-size: 11px; line-height: 1.5; color: var(--shell-body); }
+.carrysmall { justify-self: start; margin-top: 4px; font-size: 12px; color: var(--fill-text); }
+/* an em dash at full legibility: there is no clock yet, and that is a value
+   rather than a gap */
+.raildash { font-size: 11px; color: var(--shell-muted); }
+
+.railstamps { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.railstamp {
+  padding: 3px 7px;
+  border: 1.2px solid var(--fill);
+  border-radius: 999px;
+  background: var(--fill-tint);
+  font-size: 10px;
+  letter-spacing: .4px;
+  color: #111111;
+}
+.railstamp.dial { border-style: dashed; background: none; color: var(--shell-body); }
 
 /* sign-in */
 .dialog {
@@ -414,7 +519,19 @@
   color: var(--shell-muted);
 }
 
+@media (max-width: 760px) {
+  .cols { grid-template-columns: minmax(0,1fr); gap: 22px; }
+}
+
+/* 6b — the spine goes. On a phone it is 76px of nothing next to the one
+   column that matters, and the metaphor is not worth the width. */
 @media (max-width: 560px) {
-  .hero h1 { font-size: 32px; }
+  .spine { display: none; }
+  .sheetless { padding: 12px 12px 48px; }
   .shell { padding: 12px 12px 48px; }
+  /* rows stay tappable at 44px: 15px of padding either side of a 20px name */
+  .tocentry { grid-template-columns: 28px minmax(0,1fr); padding: 14px 2px; }
+  .toccol { grid-column: 2; justify-items: start; }
+  .tocopen { display: none; }
+  .tocname { font-size: 18px; }
 }

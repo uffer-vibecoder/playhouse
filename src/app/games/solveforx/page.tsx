@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SolveGame from "@/games/solveforx/SolveGame";
 import type { Puzzle } from "@/games/solveforx/engine";
 import puzzles from "@/data/solveforx.json";
@@ -12,5 +13,11 @@ import { pageTitle } from "@/lib/site";
 export const metadata = { title: pageTitle("Solve for X") };
 
 export default function SolveForXPage() {
-  return <SolveGame puzzles={puzzles as Puzzle[]} />;
+  /* `useSearchParams` needs a boundary: a link may name a puzzle
+   (`?p=…`), and reading the query is what stops this page prerendering. */
+  return (
+    <Suspense>
+      <SolveGame puzzles={puzzles as Puzzle[]} />
+    </Suspense>
+  );
 }

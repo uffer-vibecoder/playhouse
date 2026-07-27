@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import CodewordGame from "@/games/codeword/CodewordGame";
 import type { Puzzle } from "@/games/codeword/engine";
 import puzzles from "@/data/codeword.json";
@@ -16,5 +17,11 @@ import { pageTitle } from "@/lib/site";
 export const metadata = { title: pageTitle("Codeword") };
 
 export default function CodewordPage() {
-  return <CodewordGame puzzles={puzzles as Puzzle[]} />;
+  /* `useSearchParams` needs a boundary: a link may name a puzzle
+   (`?p=…`), and reading the query is what stops this page prerendering. */
+  return (
+    <Suspense>
+      <CodewordGame puzzles={puzzles as Puzzle[]} />
+    </Suspense>
+  );
 }

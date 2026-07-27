@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SlideGame from "@/games/slide/SlideGame";
 import type { Puzzle } from "@/games/slide/engine";
 import puzzles from "@/data/slide.json";
@@ -11,5 +12,11 @@ import { pageTitle } from "@/lib/site";
 export const metadata = { title: pageTitle("Sliding Tiles") };
 
 export default function SlidePage() {
-  return <SlideGame puzzles={puzzles as Puzzle[]} />;
+  /* `useSearchParams` needs a boundary: a link may name a puzzle
+   (`?p=…`), and reading the query is what stops this page prerendering. */
+  return (
+    <Suspense>
+      <SlideGame puzzles={puzzles as Puzzle[]} />
+    </Suspense>
+  );
 }

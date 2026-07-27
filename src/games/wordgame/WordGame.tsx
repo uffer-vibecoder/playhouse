@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import WordBoard from "./WordBoard";
 import { LENGTH, TRIES, type Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
@@ -17,7 +18,27 @@ const GAME_ID = "wordgame";
  * only axis worth navigating is the number and whether you have finished it.
  */
 export default function WordGame({ puzzles }: { puzzles: Puzzle[] }) {
-  const [index, setIndex] = useState(0);
+  /**
+   * Which puzzle is open, and where "open on this one" comes from.
+   *
+   * A link may name a puzzle — `?p=SL-034`, which is how the contents page
+   * carries you back to what you left unfinished. That is derived rather than
+   * copied into state on mount: an effect that set the index would render the
+   * first puzzle, then replace it, and the puzzle you asked for would be the
+   * second thing you saw. Once the picker is used, its choice wins.
+   */
+  const want = useSearchParams().get("p");
+  const [picked, setPicked] = useState<number | null>(null);
+  const asked = want ? puzzles.findIndex((p) => p.id === want) : -1;
+  const index = picked ?? (asked >= 0 ? asked : 0);
+  const setIndex = useCallback(
+    (v: number | ((i: number) => number)) =>
+      setPicked((prev) => {
+        const cur = prev ?? 0;
+        return typeof v === "function" ? v(cur) : v;
+      }),
+    []
+  );
   const [solved, setSolved] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -39,7 +60,7 @@ export default function WordGame({ puzzles }: { puzzles: Puzzle[] }) {
   /** Wraps at the end, so the last puzzle still has somewhere to go. */
   const goNext = useCallback(
     () => setIndex((i) => (i + 1) % puzzles.length),
-    [puzzles.length]
+    [puzzles.length, setIndex]
   );
 
   const slotOf = (p: Puzzle) =>

@@ -302,6 +302,33 @@ export async function loadGameSaves<T = unknown>(
   return out;
 }
 
+/** Where a player left off: the most recently touched puzzle they have not finished. */
+export type Bookmark = { slot: string; gameId: string; puzzleId: string; updatedAt: string };
+
+/**
+ * The puzzle to offer to carry on with.
+ *
+ * Local only, deliberately. This is the answer to "what was I doing?", and the
+ * honest answer is about *this* device — a puzzle half-solved on a phone is not
+ * what someone sitting at a laptop means. It also keeps the landing page
+ * instant rather than waiting on a round trip before it can render its hero.
+ *
+ * The slot is `<game>:<puzzle>:<fingerprint>`, so the id is the middle field;
+ * splitting rather than storing it again keeps one source of truth.
+ */
+export function lastUnfinished(): Bookmark | null {
+  let best: Bookmark | null = null;
+  for (const { slot, rec } of allLocal()) {
+    if (rec.solved) continue;
+    const [gameId, puzzleId] = slot.split(":");
+    if (!gameId || !puzzleId) continue;
+    if (!best || rec.updatedAt > best.updatedAt) {
+      best = { slot, gameId, puzzleId, updatedAt: rec.updatedAt };
+    }
+  }
+  return best;
+}
+
 /** Which puzzles are finished, for the picker. */
 export async function loadSolvedSet(gameId: string): Promise<Set<string>> {
   const solved = new Set<string>();

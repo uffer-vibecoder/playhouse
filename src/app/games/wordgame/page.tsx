@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import WordGame from "@/games/wordgame/WordGame";
 import type { Puzzle } from "@/games/wordgame/engine";
 import puzzles from "@/data/wordgame.json";
@@ -15,5 +16,11 @@ import { pageTitle } from "@/lib/site";
 export const metadata = { title: pageTitle("Word Guessing") };
 
 export default function WordGamePage() {
-  return <WordGame puzzles={puzzles as Puzzle[]} />;
+  /* `useSearchParams` needs a boundary: a link may name a puzzle
+   (`?p=…`), and reading the query is what stops this page prerendering. */
+  return (
+    <Suspense>
+      <WordGame puzzles={puzzles as Puzzle[]} />
+    </Suspense>
+  );
 }

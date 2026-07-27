@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import CryptoGame from "@/games/cryptogram/CryptoGame";
 import type { Puzzle } from "@/games/cryptogram/engine";
 import puzzles from "@/data/cryptogram.json";
@@ -15,5 +16,11 @@ import { pageTitle } from "@/lib/site";
 export const metadata = { title: pageTitle("Cryptogram") };
 
 export default function CryptogramPage() {
-  return <CryptoGame puzzles={puzzles as Puzzle[]} />;
+  /* `useSearchParams` needs a boundary: a link may name a puzzle
+   (`?p=…`), and reading the query is what stops this page prerendering. */
+  return (
+    <Suspense>
+      <CryptoGame puzzles={puzzles as Puzzle[]} />
+    </Suspense>
+  );
 }
