@@ -128,7 +128,7 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
       )}
 
       {open && !who && (
-        <div className="dialog" style={{ gridColumn: "1 / -1", width: "100%" }}>
+        <div className="dialog">
           <h3>Keep your progress</h3>
           <p>
             You do not need an account to play. Sign in and your half-finished puzzles follow
