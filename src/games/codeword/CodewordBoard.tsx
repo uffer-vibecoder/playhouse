@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ALPHA,
-  advance,
   buildSlots,
   check,
   clear,
@@ -15,7 +14,6 @@ import {
   freeEntries,
   initialState,
   isSolvedPuzzle,
-  letterFor,
   lettersUsed,
   nextWordCell,
   place,
@@ -52,12 +50,11 @@ export default function CodewordBoard({
   /* restore ------------------------------------------------------------- */
   useEffect(() => {
     let alive = true;
-    setRestoring(true);
     solvedOnce.current = false;
-    setCelebrate(false);
     loadProgress(slot).then((rec) => {
       if (!alive) return;
       setState(initialState(puzzle, slots, rec?.entries));
+      setCelebrate(false);
       setRestoring(false);
     });
     return () => {
@@ -221,7 +218,9 @@ export default function CodewordBoard({
               );
             })
           )}
-          <Celebration active={celebrate} theme={puzzle.theme} />
+          {celebrate && (
+            <Celebration theme={puzzle.theme} onDone={() => setCelebrate(false)} />
+          )}
         </div>
       </div>
 

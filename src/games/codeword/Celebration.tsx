@@ -9,6 +9,11 @@ import { useEffect, useState } from "react";
  * across for Stage & Screen, blossoms for everything else. The grid's own
  * accent wave runs whatever the theme, and all of it is suppressed under
  * prefers-reduced-motion, which leaves the plain "solved" banner doing the work.
+ *
+ * Every random choice is made once, when the burst is created, and then held in
+ * state. Rolling them during render would be impure: React may re-render this
+ * component for reasons of its own, and the petals would silently change colour
+ * and position each time.
  */
 
 const ACCENT = "#F5A9C6";
@@ -26,6 +31,55 @@ const STYLE_BY_THEME: Record<string, Style> = {
 const CUSTOM_ART: Record<string, string> = {
   "Stage & Screen": "/stage-screen.png",
 };
+
+type Sprite = {
+  id: number;
+  size: number;
+  /** percent along the grid, or vw / vh for the loose ones */
+  x: number;
+  y: number;
+  delay: number;
+  dur: number;
+  swayDur: number;
+  pale: boolean;
+};
+
+type Burst = { style: Style; art?: string; overGrid: Sprite[]; loose: Sprite[] };
+
+const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+function buildBurst(theme?: string): Burst {
+  const style: Style = (theme ? STYLE_BY_THEME[theme] : undefined) ?? "blossom";
+  const art = theme ? CUSTOM_ART[theme] : undefined;
+  const usable: Style = style === "custom" && !art ? "blossom" : style;
+
+  const overGridCount = usable === "custom" ? 8 : usable === "star" ? 16 : 14;
+  const looseCount = usable === "custom" ? 36 : 26;
+
+  const overGrid: Sprite[] = Array.from({ length: overGridCount }, (_, i) => ({
+    id: i,
+    size: rand(26, 56),
+    x: rand(2, 88),
+    y: rand(2, 88),
+    delay: 250 + i * 85,
+    dur: 0,
+    swayDur: 0,
+    pale: i % 3 === 0,
+  }));
+
+  const loose: Sprite[] = Array.from({ length: looseCount }, (_, i) => ({
+    id: i,
+    size: usable === "custom" ? rand(54, 120) : rand(9, 20),
+    x: rand(0, usable === "custom" ? 88 : 100),
+    y: 0,
+    delay: i * (usable === "custom" ? 110 : 170),
+    dur: usable === "custom" ? rand(2.4, 5) : rand(4.6, 8),
+    swayDur: rand(1.1, 3.2),
+    pale: Math.random() < 0.38,
+  }));
+
+  return { style: usable, art, overGrid, loose };
+}
 
 function Blossom({ size, petal }: { size: number; petal: string }) {
   return (
@@ -46,97 +100,91 @@ function Spark({ size, fill }: { size: number; fill: string }) {
   );
 }
 
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
+function Petal({ size, fill }: { size: number; fill: string }) {
+  return (
+    <svg width={size} height={size * 1.4} viewBox="0 0 40 56" aria-hidden="true">
+      <path d="M20 0C31 14 40 27 40 36a20 20 0 0 1-40 0C0 27 9 14 20 0Z" fill={fill} />
+    </svg>
+  );
+}
 
-export default function Celebration({ active, theme }: { active: boolean; theme?: string }) {
-  const [on, setOn] = useState(false);
-  const [reduced, setReduced] = useState(false);
+/**
+ * Mounted by the board when a puzzle is solved, and unmounts itself when the
+ * burst is spent. The sprites are rolled once in a lazy initializer rather than
+ * in an effect: an initializer runs exactly once for the life of the component,
+ * so there is no cascading render and no chance of the petals being reshuffled
+ * by an unrelated re-render.
+ */
+export default function Celebration({ theme, onDone }: { theme?: string; onDone: () => void }) {
+  const [burst] = useState<Burst | null>(() => {
+    const reduced =
+      typeof window !== "undefined" &&
+      (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+    return reduced ? null : buildBurst(theme);
+  });
 
   useEffect(() => {
-    setReduced(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
-  }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    setOn(true);
-    const t = setTimeout(() => setOn(false), 4600); // tidy up so the grid stays legible
+    const t = setTimeout(onDone, 4600); // tidy up so the grid stays legible
     return () => clearTimeout(t);
-  }, [active]);
+  }, [onDone]);
 
-  if (!on || reduced) return null;
-
-  const style: Style = (theme ? STYLE_BY_THEME[theme] : undefined) ?? "blossom";
-  const art = theme ? CUSTOM_ART[theme] : undefined;
-
-  // scattered over the grid
-  const overGrid = Array.from({ length: style === "custom" ? 8 : style === "star" ? 16 : 14 }, (_, i) => ({
-    i,
-    size: rand(26, 56),
-    left: rand(2, 88),
-    top: rand(2, 88),
-    delay: 250 + i * 85,
-  }));
-
-  // shed down the page, or flown across it
-  const loose = Array.from({ length: style === "custom" ? 36 : 26 }, (_, i) => ({
-    i,
-    size: style === "custom" ? rand(54, 120) : rand(9, 20),
-    pos: rand(0, style === "custom" ? 88 : 100),
-    dur: style === "custom" ? rand(2.4, 5) : rand(4.6, 8),
-    swayDur: rand(1.1, 3.2),
-    delay: i * (style === "custom" ? 110 : 170),
-  }));
+  if (!burst) return null;
+  const { style, art, overGrid, loose } = burst;
 
   return (
     <>
       <div className="bloomlayer">
-        {overGrid.map((b) => (
+        {overGrid.map((s) => (
           <div
-            key={b.i}
+            key={s.id}
             className="blossom"
             style={{
-              left: `${b.left}%`,
-              top: `${b.top}%`,
-              animationDelay: `${b.delay}ms, ${b.delay + 1650}ms`,
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              animationDelay: `${s.delay}ms, ${s.delay + 1650}ms`,
             }}
           >
             {style === "star" ? (
-              <Spark size={b.size} fill={b.i % 3 === 0 ? TINT : ACCENT} />
+              <Spark size={s.size} fill={s.pale ? TINT : ACCENT} />
             ) : (
-              <Blossom size={b.size} petal={b.i % 3 === 0 ? TINT : ACCENT} />
+              <Blossom size={s.size} petal={s.pale ? TINT : ACCENT} />
             )}
           </div>
         ))}
       </div>
 
-      {loose.map((p) =>
+      {loose.map((s) =>
         style === "custom" && art ? (
           <div
-            key={p.i}
+            key={s.id}
             className="flyer"
-            style={{ top: `${p.pos}vh`, width: p.size, animationDuration: `${p.dur}s`, animationDelay: `${p.delay}ms` }}
+            style={{
+              top: `${s.x}vh`,
+              width: s.size,
+              animationDuration: `${s.dur}s`,
+              animationDelay: `${s.delay}ms`,
+            }}
           >
-            <i style={{ animationDuration: `${p.swayDur}s` }}>
+            <i style={{ animationDuration: `${s.swayDur}s` }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={art} alt="" />
             </i>
           </div>
         ) : (
           <div
-            key={p.i}
+            key={s.id}
             className="petal"
-            style={{ left: `${p.pos}vw`, animationDuration: `${p.dur}s`, animationDelay: `${p.delay}ms` }}
+            style={{
+              left: `${s.x}vw`,
+              animationDuration: `${s.dur}s`,
+              animationDelay: `${s.delay}ms`,
+            }}
           >
-            <i style={{ animationDuration: `${p.swayDur}s` }}>
+            <i style={{ animationDuration: `${s.swayDur}s` }}>
               {style === "star" ? (
-                <Spark size={p.size} fill={Math.random() < 0.4 ? TINT : ACCENT} />
+                <Spark size={s.size} fill={s.pale ? TINT : ACCENT} />
               ) : (
-                <svg width={p.size} height={p.size * 1.4} viewBox="0 0 40 56" aria-hidden="true">
-                  <path
-                    d="M20 0C31 14 40 27 40 36a20 20 0 0 1-40 0C0 27 9 14 20 0Z"
-                    fill={Math.random() < 0.35 ? TINT : ACCENT}
-                  />
-                </svg>
+                <Petal size={s.size} fill={s.pale ? TINT : ACCENT} />
               )}
             </i>
           </div>
