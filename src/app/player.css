@@ -1,0 +1,355 @@
+/* ── Hearth design language ────────────────────────────────────────────────
+   Tokens, type and geometry taken from the design handoff so the player and
+   the printed sheet read as one product. The screen-only controls (tabs,
+   letter pad, tools) are built from the same tokens rather than inventing a
+   second visual language.
+── */
+:root{
+  --ink:#111111; --body:#514B45;
+  --muted:#7A736C; --muted-2:#8C857D; --muted-3:#9A938B;
+  --rule:#E4DFD8; --underline:#C9C2BA; --tile:#F4F1EC;
+  --accent:#F5A9C6; --accent-tint:#FDEFF4; --accent-deep:#C4467E;
+  --display:'Fredoka', system-ui, sans-serif;
+  --ui:'Space Grotesk', system-ui, sans-serif;
+
+  /* The puzzle is a sheet of paper and stays one in both themes — inverting a
+     grid of black squares and pink accent would wreck the handoff's palette
+     and the print fidelity with it. What changes is the surround: in the dark
+     the sheet sits on a warm ground, slightly rose-biased toward the accent
+     rather than a neutral grey, the way paper does on a desk. */
+  --surround:#FFFFFF;
+  --sheet-pad:0px;
+  --sheet-radius:0px;
+  --sheet-shadow:none;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --surround:#1A1517;
+    --sheet-pad:clamp(18px, 4vw, 34px);
+    --sheet-radius:16px;
+    --sheet-shadow:0 20px 60px rgba(0,0,0,.55);
+  }
+}
+/* the viewer's own toggle has to win over the OS preference, both ways */
+:root[data-theme="dark"]{
+  --surround:#1A1517;
+  --sheet-pad:clamp(18px, 4vw, 34px);
+  --sheet-radius:16px;
+  --sheet-shadow:0 20px 60px rgba(0,0,0,.55);
+}
+:root[data-theme="light"]{
+  --surround:#FFFFFF;
+  --sheet-pad:0px;
+  --sheet-radius:0px;
+  --sheet-shadow:none;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--surround); color:var(--ink); font-family:var(--ui);
+  min-height:100vh;
+}
+.sheet{
+  width:100%; max-width:640px; margin:0 auto; background:#FFFFFF;
+  padding:var(--sheet-pad); border-radius:var(--sheet-radius); box-shadow:var(--sheet-shadow);
+}
+
+/* header */
+header{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+  border-bottom:3px solid var(--ink); padding-bottom:12px;
+}
+h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; letter-spacing:-.5px; margin:0}
+.strapline{font-size:11px; letter-spacing:2.4px; text-transform:capitalize; color:var(--muted); margin-top:6px}
+.badges{display:flex; align-items:center; gap:8px}
+.pill-no{
+  background:var(--accent); color:var(--ink); font-family:var(--display); font-weight:600;
+  font-size:15px; letter-spacing:.4px; padding:7px 14px; border-radius:999px; white-space:nowrap;
+}
+.pill-diff{
+  border:2px solid var(--ink); font-weight:700; font-size:13px; letter-spacing:1.4px;
+  text-transform:capitalize; padding:6px 12px; border-radius:999px; white-space:nowrap;
+}
+
+/* theme tag */
+.introrow{display:flex; align-items:flex-start; gap:20px; margin:14px 0 4px}
+.theme-tag{
+  display:inline-flex; align-items:center; gap:8px; background:var(--accent-tint);
+  border:1.5px solid var(--accent); border-radius:999px; padding:4px 12px;
+}
+.theme-tag .label{font-size:9px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted-3)}
+.theme-tag .value{font-family:var(--display); font-weight:600; font-size:13px; color:var(--ink)}
+.intro{font-size:12px; line-height:1.5; color:var(--body); max-width:52ch; margin:0}
+.intro + .intro{margin-top:10px}
+.intro b{color:var(--ink); font-weight:700}
+
+/* ── disclosures ───────────────────────────────────────────────────────────
+   A pack of two dozen puts six rows of picker above the grid, and the code key
+   and tracker another three below. Folded away, the puzzle is the page. The
+   summary row borrows the footer's label treatment so it reads as structure
+   rather than another control competing with the pills.
+── */
+.disclosure{border-top:1.5px solid var(--rule); margin-top:4px}
+.disclosure > summary{
+  list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px;
+  padding:11px 0; font-size:10px; font-weight:700; letter-spacing:1.6px;
+  text-transform:uppercase; color:var(--muted-3);
+}
+.disclosure > summary::-webkit-details-marker{display:none}
+.disclosure > summary:hover{color:var(--ink)}
+.disclosure > summary:focus-visible{outline:2px solid var(--accent-deep); outline-offset:3px}
+/* chevron, drawn rather than a glyph so it sits on the baseline predictably */
+.chev{
+  flex:none; width:7px; height:7px; margin-left:-1px;
+  border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg); transition:transform .18s ease;
+}
+.disclosure[open] > summary .chev{transform:rotate(45deg)}
+.sum-note{
+  margin-left:auto; font-family:var(--display); font-weight:600; font-size:12px;
+  letter-spacing:0; text-transform:none; color:var(--ink);
+}
+.disclosure-body{padding-bottom:14px}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+
+/* theme filter — quieter than the puzzle pills so it reads as a level above */
+.filters{display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0}
+.filter{
+  font-family:var(--ui); font-weight:700; font-size:9.5px; letter-spacing:1.2px;
+  text-transform:uppercase; padding:5px 11px; border-radius:999px;
+  border:1.5px solid var(--rule); background:transparent; color:var(--muted); cursor:pointer;
+}
+.filter[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-tint); color:var(--ink)}
+
+/* puzzle picker — the pills from the header, made selectable */
+.tabs{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 14px}
+.tab{
+  font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.4px;
+  padding:6px 14px; border-radius:999px; border:2px solid var(--ink);
+  background:transparent; color:var(--ink); cursor:pointer;
+}
+.tab[aria-selected="true"]{background:var(--accent); border-color:var(--accent)}
+
+/* grid — 13 x 43px on a 1px #111 lattice inside a 3px #111 border */
+.gridwrap{container-type:inline-size; width:100%; max-width:577px; margin:0 auto; position:relative}
+.grid{
+  display:grid; grid-template-columns:repeat(13,1fr); gap:1px;
+  background:var(--ink); border:3px solid var(--ink); width:100%;
+}
+/* Square cells. The padding-bottom trick is the floor; aspect-ratio takes over
+   where it exists. Without a fallback an older phone collapses every cell to
+   zero height and there is no puzzle at all. */
+.cell{
+  position:relative; height:0; padding-bottom:100%;
+  background:#FFFFFF; cursor:pointer; overflow:hidden;
+}
+@supports (aspect-ratio:1/1){
+  .cell{height:auto; padding-bottom:0; aspect-ratio:1/1}
+}
+.cell.block{background:var(--ink); cursor:default}
+
+/* Type sizes track the container so a 577px grid lands exactly on the handoff's
+   9px number and 23px letter, with floors so a phone stays legible.
+   Container units need a recent browser, and an unsupported unit invalidates
+   the whole declaration — which would drop the size entirely and put a 16px
+   number in a 25px cell. So: a viewport-based approximation first, the real
+   thing behind @supports. */
+.cell .num{
+  position:absolute; top:1px; left:2px; z-index:3;
+  font-family:var(--ui); font-weight:500; line-height:1; color:var(--muted-2);
+  font-size:9px;
+}
+.cell .ltr{
+  position:absolute; top:0; right:0; bottom:0; left:0; z-index:3;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-weight:500; color:var(--ink);
+  text-transform:lowercase; font-size:20px; padding-top:2px;
+}
+@media (max-width:600px){
+  .cell .num{font-size:7.5px}
+  .cell .ltr{font-size:15px}
+}
+@supports (width:1cqw){
+  .cell .num{font-size:max(7.5px, 1.56cqw)}
+  .cell .ltr{font-size:max(15px, 3.99cqw); padding-top:.8cqw}
+}
+/* the word being worked on, then every square sharing the selected number,
+   then the square the cursor is in — layered lightest to strongest */
+.cell.word::before{content:""; position:absolute; top:0; right:0; bottom:0; left:0; background:var(--accent-tint); z-index:1}
+.cell.same::after{content:""; position:absolute; top:0; right:0; bottom:0; left:0; background:var(--accent); opacity:.30; z-index:2}
+.cell.sel{outline:2.5px solid var(--accent-deep); outline-offset:-2.5px; z-index:4}
+.cell.given .ltr{font-weight:600; color:var(--accent-deep)}
+.cell.wrong .ltr{color:var(--accent-deep); text-decoration:line-through}
+@keyframes ping{0%{transform:scale(1)}45%{transform:scale(.86)}100%{transform:scale(1)}}
+.cell.ping .ltr{animation:ping .32s ease}
+
+/* status */
+.status{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted-3);
+  margin:14px 0 10px;
+}
+.status b{font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:0; color:var(--ink)}
+
+/* letter pad — the code-key box, made pressable */
+.pad{display:grid; grid-template-columns:repeat(13,1fr); gap:5px; margin-bottom:12px}
+.key{
+  height:34px; border:1.5px solid var(--ink); border-radius:5px; background:#FFFFFF;
+  font-family:var(--display); font-weight:500; font-size:18px; text-transform:lowercase;
+  color:var(--ink); cursor:pointer; padding:0;
+}
+.key.used{color:var(--muted-3); border-color:var(--underline)}
+.key.wide{
+  grid-column:span 3; font-family:var(--ui); font-size:9.5px; font-weight:700;
+  letter-spacing:1.2px; text-transform:uppercase;
+}
+.key:active{background:var(--accent)}
+
+/* tools — the outlined difficulty pill */
+.tools{display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap}
+.tool{
+  flex:1; min-width:110px; padding:8px 12px; border:2px solid var(--ink); border-radius:999px;
+  background:transparent; font-family:var(--ui); font-weight:700; font-size:10px;
+  letter-spacing:1.4px; text-transform:uppercase; color:var(--ink); cursor:pointer;
+}
+.tool:active{background:var(--accent); border-color:var(--accent)}
+
+/* code key + letters-used tracker, as specified for page 1 */
+.kgrid{display:grid; grid-template-columns:repeat(13,1fr); gap:6px}
+.kcell{text-align:center}
+.kcell .kn{display:block; font-family:var(--ui); font-weight:700; font-size:9px; color:var(--muted-2); margin-bottom:3px}
+.kcell .kbox{
+  position:relative; height:30px; border:1.5px solid var(--ink); border-radius:5px; background:#FFFFFF;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  font-family:var(--display); font-weight:500; font-size:18px; color:var(--ink); text-transform:lowercase;
+}
+.kcell.given .kbox{font-weight:600; color:var(--accent)}
+.kcell.sel .kbox{outline:2.5px solid var(--accent-deep); outline-offset:-1.5px}
+
+.tracker{display:grid; grid-template-columns:repeat(26,1fr); gap:3px}
+.tcell{
+  position:relative; height:26px; border-radius:4px; background:var(--tile);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-weight:500; font-size:14px; color:var(--ink); text-transform:lowercase;
+}
+.tcell.used{background:var(--accent)}
+
+/* footer */
+footer{
+  border-top:1.5px solid var(--rule); margin-top:20px; padding-top:12px;
+  display:flex; justify-content:space-between; gap:12px;
+  font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted-3);
+}
+.win{
+  margin-top:14px; padding:12px 16px; border:1.5px solid var(--accent); border-radius:12px;
+  background:var(--accent-tint); font-family:var(--display); font-weight:600; font-size:15px;
+  color:var(--ink); display:none; align-items:center; gap:12px;
+}
+.win.show{display:flex; animation:winIn .5s cubic-bezier(.2,.8,.3,1) both}
+.win svg{flex:none; animation:spinSlow 9s linear infinite}
+@keyframes winIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+@keyframes spinSlow{to{transform:rotate(360deg)}}
+
+/* ── the garden ────────────────────────────────────────────────────────────
+   Completion opens the grid into bloom: a diagonal wave washes the squares in
+   accent, blossoms open on top of it, and petals drift down the page. Built
+   only from the palette's pinks, so a finished puzzle still looks like the
+   same product. Everything here is decorative — it is all suppressed under
+   prefers-reduced-motion, which leaves the banner doing the work.
+── */
+@keyframes cellWave{
+  0%{background:#FFFFFF}
+  30%{background:var(--accent)}
+  100%{background:#FFFFFF}
+}
+.cell.wave{animation:cellWave 1.3s ease both}
+
+.bloomlayer{position:absolute; top:0; right:0; bottom:0; left:0; pointer-events:none; z-index:6; overflow:visible}
+.blossom{
+  position:absolute; transform-origin:50% 50%;
+  animation:blossomIn .85s cubic-bezier(.2,.9,.3,1) both, blossomOut .9s ease forwards;
+}
+@keyframes blossomIn{
+  0%{opacity:0; transform:scale(.1) rotate(-50deg)}
+  55%{opacity:1; transform:scale(1.15) rotate(8deg)}
+  100%{opacity:1; transform:scale(1) rotate(0)}
+}
+@keyframes blossomOut{
+  0%,70%{opacity:1}
+  100%{opacity:0; transform:scale(.94) translateY(-6px)}
+}
+
+.petal{
+  position:fixed; top:-6vh; left:0; z-index:50; pointer-events:none;
+  animation:petalFall linear forwards;
+}
+.petal i{display:block; animation:petalSway 2.2s ease-in-out infinite alternate}
+@keyframes petalFall{to{transform:translateY(112vh)}}
+@keyframes petalSway{
+  from{transform:translateX(-26px) rotate(-40deg)}
+  to{transform:translateX(26px) rotate(40deg)}
+}
+
+/* Sprites that cross the screen rather than falling — used by the custom
+   celebration, where the art is a thing in flight rather than something shed. */
+.flyer{
+  position:fixed; left:-20vw; z-index:50; pointer-events:none;
+  animation:flyAcross linear forwards;
+}
+.flyer i{display:block; animation:flySpin linear infinite}
+.flyer img{display:block; width:100%; height:auto}
+@keyframes flyAcross{to{transform:translateX(140vw)}}
+@keyframes flySpin{to{transform:rotate(360deg)}}
+
+@media (prefers-reduced-motion:reduce){
+  .cell.ping .ltr{animation:none}
+  .cell.wave{animation:none}
+  .win.show{animation:none}
+  .win svg{animation:none}
+}
+
+/* ── print ─────────────────────────────────────────────────────────────────
+   A convenience sheet of whatever puzzle is open, not a replacement for the
+   PDF pipeline — `codeword export` drives the design team's own two-page
+   renderer and stays the artifact for anything going to a printer properly.
+   Everything interactive drops away; the on-screen selection does too, so the
+   sheet reads as a clean puzzle rather than a screenshot of one in progress.
+── */
+@media print{
+  @page{size:letter portrait; margin:14mm}
+  html,body{background:#FFFFFF}
+  body{padding:0; display:block; print-color-adjust:exact; -webkit-print-color-adjust:exact}
+  /* the sheet is the paper now — drop the surround treatment entirely */
+  .wrap{max-width:none; padding:0; border-radius:0; box-shadow:none; background:#FFFFFF}
+  .pad,.tools,.win,.bloomlayer,.petal{display:none !important}
+  /* the picker is navigation; the rest are folded open by the print handler */
+  #pickerbox,#howbox{display:none !important}
+  .disclosure{border-top:1.5px solid var(--rule)}
+  .disclosure > summary{padding:10px 0 6px; color:var(--muted-3)}
+  .disclosure > summary .chev,.disclosure > summary .sum-note{display:none}
+  .gridwrap{max-width:150mm; margin:0}
+  .cell,.kbox,.tcell,.pill-no,.theme-tag{print-color-adjust:exact; -webkit-print-color-adjust:exact}
+  /* selection is a screen affordance — it should not print */
+  .cell.word::before,.cell.same::after{display:none}
+  .cell.sel{outline:none}
+  .kcell.sel .kbox{outline:none}
+  .cell.wave{animation:none}
+  .disclosure,header,.introrow{break-inside:avoid}
+  footer{margin-top:14px}
+}
+@media (max-width:560px){
+  body{padding:20px 12px 40px}
+  /* the badges sit under the title rather than fighting it for width */
+  header{flex-direction:column; align-items:flex-start; gap:10px}
+  h1{font-size:32px}
+  .strapline{font-size:10px; letter-spacing:1.8px}
+  .pad{grid-template-columns:repeat(7,1fr)}
+  .key{height:40px; font-size:19px}          /* thumb-sized */
+  .key.wide{grid-column:span 2}
+  .tools{flex-direction:column}
+  .tool{min-width:0}
+  /* 13 columns leaves 20px boxes; seven is legible and still scans in order */
+  .kgrid{grid-template-columns:repeat(7,1fr)}
+  .tracker{grid-template-columns:repeat(13,1fr)}
+  .status{font-size:9px; letter-spacing:1.2px}
+}

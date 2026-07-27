@@ -1,66 +1,40 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
+import AuthBar from "@/components/AuthBar";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
+    <main className="shell">
+      <div className="topbar">
+        <Link href="/" className="wordmark">
+          Play<span>house</span>
+        </Link>
+        <AuthBar />
+      </div>
+
+      <div className="hero">
+        <h1>Puzzles, on the house.</h1>
+        <p>
+          Play as much as you like without an account. Sign in only if you want your
+          half-finished puzzles to follow you to another device.
+        </p>
+      </div>
+
+      <div className="games">
+        <Link href="/games/codeword" className="gamecard">
+          <span className="meta">80 puzzles · 10 themes</span>
+          <h2>Codeword</h2>
           <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+            Every number is a letter. Crack the code from four starters and fill the grid.
+            Each one has exactly one solution.
           </p>
+        </Link>
+
+        <div className="gamecard soon">
+          <span className="meta">Coming soon</span>
+          <h2>Something else</h2>
+          <p>There is room here for the next one — the shell, saves and sign-in are shared.</p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
