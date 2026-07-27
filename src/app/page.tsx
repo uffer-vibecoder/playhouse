@@ -1,6 +1,11 @@
 import Link from "next/link";
 import AuthBar from "@/components/AuthBar";
 import { SITE } from "@/lib/site";
+import codeword from "@/data/codeword.json";
+import wordgame from "@/data/wordgame.json";
+import solveforx from "@/data/solveforx.json";
+import slide from "@/data/slide.json";
+import cryptogram from "@/data/cryptogram.json";
 
 /**
  * The library. One card per game, in the order they became playable.
@@ -8,7 +13,15 @@ import { SITE } from "@/lib/site";
  * The unreleased cards name what is actually planned rather than saying
  * "something else" — someone deciding whether to bookmark the site wants to
  * know what is coming, and a vague placeholder reads as abandoned.
+ *
+ * Counts are read from the archives rather than typed out. They were typed out
+ * once and were wrong within the hour — adding a single cryptogram left the
+ * card claiming 44 of 45. The archives only ever grow, so anything hand-written
+ * here is a promise to remember something nobody will remember.
  */
+const themeCount = new Set(
+  (codeword as { theme?: string }[]).map((p) => p.theme).filter(Boolean)
+).size;
 
 type Game = {
   href?: string;
@@ -20,7 +33,7 @@ type Game = {
 const GAMES: Game[] = [
   {
     href: "/games/codeword",
-    meta: "80 puzzles · 10 themes",
+    meta: `${codeword.length} puzzles · ${themeCount} themes`,
     title: "Codeword",
     blurb:
       "Every number is a letter. Crack the code from four starters and fill the grid. Each one has exactly one solution.",
@@ -29,28 +42,28 @@ const GAMES: Game[] = [
   // trademark and this is a public page; the real name is still to be picked.
   {
     href: "/games/wordgame",
-    meta: "120 puzzles",
+    meta: `${wordgame.length} puzzles`,
     title: "Word Guessing",
     blurb:
       "Six guesses to find a hidden five-letter word — an archive to work through rather than one a day.",
   },
   {
     href: "/games/solveforx",
-    meta: "120 sets",
+    meta: `${solveforx.length} sets`,
     title: "Solve for X",
     blurb:
       "Ten equations a set, easing from one step to two. Every answer is a whole number.",
   },
   {
     href: "/games/slide",
-    meta: "120 boards",
+    meta: `${slide.length} boards`,
     title: "Sliding Tiles",
     blurb:
       "Fifteen numbers and a gap. Push them back into order — every board here can be solved.",
   },
   {
     href: "/games/cryptogram",
-    meta: "44 puzzles",
+    meta: `${cryptogram.length} puzzles`,
     title: "Cryptogram",
     blurb:
       "A sentence hidden behind numbers — the same trick as Codeword, on a line of text instead of a grid.",
