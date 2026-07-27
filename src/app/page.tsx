@@ -49,7 +49,8 @@ const GAMES: Game[] = [
       "Fifteen numbers and a gap. Push them back into order — every board here can be solved.",
   },
   {
-    meta: "In the works",
+    href: "/games/cryptogram",
+    meta: "44 puzzles",
     title: "Cryptogram",
     blurb:
       "A sentence hidden behind numbers — the same trick as Codeword, on a line of text instead of a grid.",

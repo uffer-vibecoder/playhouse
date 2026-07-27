@@ -1,0 +1,65 @@
+# Cryptogram source texts — one per line, `#` starts a comment.
+#
+# Rules the build script enforces, so break them freely and it will tell you:
+#   * letters, spaces, commas and a final full stop only — no apostrophes, so
+#     no contractions and no possessives
+#   * no proper nouns; every word must exist in the codeword vocabulary, which
+#     is what lets the solver prove a text has exactly one reading. That
+#     vocabulary is English plus American, so British-only spellings are out —
+#     CENTRE and RECOGNISE were both rejected on the first pass
+#   * avoid heavily repetitive lines. "Better late than never, but never late
+#     is better than both" was rejected as ambiguous even with seven starters:
+#     repeating the same few words gives the solver almost nothing to work with
+#   * long enough, and with enough distinct letters, to be solvable at all —
+#     a short line with few letters has many valid decodings
+#
+# These are starter texts. Proverbs are nobody's property and plain facts are
+# not copyrightable; Noah and his wife are adding their own lines later.
+
+# ── proverbs and sayings ────────────────────────────────────────────────────
+Do not count your chickens before they are hatched.
+People who live in glass houses should not throw stones.
+A journey of a thousand miles begins with a single step.
+The grass is always greener on the other side of the fence.
+Absence makes the heart grow fonder, or so the saying goes.
+A stitch in time saves nine, and a little care saves plenty.
+Too many cooks will spoil the broth, however good the soup.
+The early bird catches the worm, but the second mouse wins.
+You can lead a horse to water, but you cannot make it drink.
+Every cloud is supposed to have a silver lining somewhere.
+Do not judge a book by its cover, however tempting that is.
+A bird in the hand is worth two of them hiding in the bush.
+When the cat is away, the mice will play for hours on end.
+Never trouble trouble until trouble happens to bother you.
+Actions speak louder than words, and last a great deal longer.
+Do not throw the baby out with the bath water in your haste.
+There is no use crying over milk that has hit the kitchen floor.
+Great minds think alike, though fools seldom differ either.
+Do not put all of your eggs into one basket, however sturdy.
+A watched pot never boils, and a watched clock never moves.
+
+# ── science and nature ──────────────────────────────────────────────────────
+An octopus has three hearts, blue blood, and no bones at all.
+Honey never spoils, even after thousands of years in a jar.
+Sharks were swimming in the sea long before trees existed.
+Water expands as it freezes, which is the reason ice floats.
+A single bolt of lightning is hotter than the surface of the sun.
+Bananas count as berries, but strawberries do not count at all.
+Sound travels about four times faster in water than in air.
+The moon drifts a little further away from us every single year.
+Bees are able to tell human faces apart, which seems unlikely.
+On the planet nearest the sun, one day lasts longer than a year.
+Trees warn each other about hungry insects through their roots.
+The deepest trench in the ocean is deeper than any mountain is tall.
+A hummingbird has to eat almost constantly to stay in the air.
+Your bones are, weight for weight, stronger than solid steel.
+Butterflies taste the world using sensors in their own feet.
+A cloud can weigh many hundreds of tons and still float above us.
+The middle of our planet is about as hot as the surface of the sun.
+Sea otters hold hands while sleeping so they do not drift apart.
+A day on our planet is slowly getting longer as the moon retreats.
+Owls cannot move their eyes, so they turn their whole head instead.
+Some trees alive today were seedlings before the pyramids were built.
+The oceans hold almost all of the water on the entire planet.
+Ice is slippery because a thin film of water forms on top of it.
+Glass is not a liquid, whatever your teacher may have told you.

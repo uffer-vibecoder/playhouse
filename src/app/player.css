@@ -370,6 +370,49 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   .sl-board{max-width:300px}
 }
 
+/* ── cryptogram ──────────────────────────────────────────────────────────────
+   A sentence, not a grid. Words are inline blocks that wrap between them and
+   never inside one — a word broken across two lines is far harder to read as a
+   pattern, which is the whole skill being exercised.
+── */
+.cg-wrap{position:relative; margin:16px 0 12px}
+/* The gap between words has to be obviously larger than the gap between
+   letters, or the sentence reads as one long run of numbers and the word
+   lengths — the solver's best foothold — stop being visible at a glance. */
+.cg-line{display:flex; flex-wrap:wrap; gap:10px 20px; justify-content:center}
+.cg-word{display:inline-flex; gap:3px; align-items:flex-start}
+.cg-cell{
+  display:grid; justify-items:center; gap:2px;
+  width:26px; padding:3px 0 2px; margin:0; cursor:pointer;
+  background:#FFFFFF; border:0; border-bottom:2px solid var(--underline); border-radius:3px;
+}
+.cg-cell:hover{border-bottom-color:var(--accent)}
+.cg-cell.sel{background:var(--accent-tint); border-bottom-color:var(--ink)}
+.cg-cell:focus-visible{outline:2px solid var(--accent-deep); outline-offset:1px}
+.cg-ltr{
+  font-family:var(--display); font-weight:600; font-size:19px; line-height:1.1;
+  color:var(--ink); min-height:21px;
+}
+.cg-cell.given .cg-ltr{color:var(--accent-deep)}
+.cg-cell.wrong .cg-ltr{color:var(--accent-deep); text-decoration:line-through}
+.cg-num{
+  font-family:var(--ui); font-size:9px; font-weight:700; letter-spacing:.4px;
+  color:var(--muted-2); font-variant-numeric:tabular-nums;
+}
+.cg-cell.sel .cg-num{color:var(--ink)}
+/* punctuation is not a square — it sits on the same baseline and does nothing */
+.cg-punct{
+  align-self:flex-start; padding:3px 0 2px;
+  font-family:var(--display); font-weight:600; font-size:19px; line-height:1.1;
+  color:var(--body);
+}
+
+@media (max-width:560px){
+  .cg-line{gap:8px 14px}
+  .cg-cell{width:22px}
+  .cg-ltr,.cg-punct{font-size:17px}
+}
+
 /* footer */
 footer{
   border-top:1.5px solid var(--rule); margin-top:20px; padding-top:12px;

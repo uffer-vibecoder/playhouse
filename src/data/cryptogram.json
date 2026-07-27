@@ -1,0 +1,459 @@
+[
+ {
+  "id": "CG-001",
+  "text": "RE8gTk9UIENPVU5UIFlPVVIgQ0hJQ0tFTlMgQkVGT1JFIFRIRVkgQVJFIEhBVENIRUQu",
+  "key": "IWBYPNRMZEJDOVXSKLCAFUGQTH",
+  "given": [
+   10
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-002",
+  "text": "UEVPUExFIFdITyBMSVZFIElOIEdMQVNTIEhPVVNFUyBTSE9VTEQgTk9UIFRIUk9XIFNUT05FUy4=",
+  "key": "IVNBZOWPKTDEFUYRAJGMHSQCLX",
+  "given": [
+   2,
+   6,
+   19
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-003",
+  "text": "QSBKT1VSTkVZIE9GIEEgVEhPVVNBTkQgTUlMRVMgQkVHSU5TIFdJVEggQSBTSU5HTEUgU1RFUC4=",
+  "key": "MUJZLVOADYETHPRBKWQISFNGCX",
+  "given": [
+   1,
+   11
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-004",
+  "text": "VEhFIEdSQVNTIElTIEFMV0FZUyBHUkVFTkVSIE9OIFRIRSBPVEhFUiBTSURFIE9GIFRIRSBGRU5DRS4=",
+  "key": "OQNFWRJVPUEXZLAMDGHCTIKYSB",
+  "given": [
+   11,
+   17
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-005",
+  "text": "QUJTRU5DRSBNQUtFUyBUSEUgSEVBUlQgR1JPVyBGT05ERVIsIE9SIFNPIFRIRSBTQVlJTkcgR09FUy4=",
+  "key": "XJAZVWQDCLNPUYFIGTMKBSEOHR",
+  "given": [
+   14,
+   15,
+   19,
+   20,
+   23
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-006",
+  "text": "QSBTVElUQ0ggSU4gVElNRSBTQVZFUyBOSU5FLCBBTkQgQSBMSVRUTEUgQ0FSRSBTQVZFUyBQTEVOVFku",
+  "key": "BYUELVPJMGQZHDKFXWOINCTSAR",
+  "given": [
+   4,
+   6,
+   26
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-007",
+  "text": "VE9PIE1BTlkgQ09PS1MgV0lMTCBTUE9JTCBUSEUgQlJPVEgsIEhPV0VWRVIgR09PRCBUSEUgU09VUC4=",
+  "key": "LDSQNTWOKRIAYUVFXZMGCEHPBJ",
+  "given": [
+   2,
+   8,
+   19,
+   20,
+   21,
+   25
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-008",
+  "text": "VEhFIEVBUkxZIEJJUkQgQ0FUQ0hFUyBUSEUgV09STSwgQlVUIFRIRSBTRUNPTkQgTU9VU0UgV0lOUy4=",
+  "key": "WDXPLJQAVFTRCUZKESIHNOYBGM",
+  "given": [
+   1,
+   17
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-009",
+  "text": "WU9VIENBTiBMRUFEIEEgSE9SU0UgVE8gV0FURVIsIEJVVCBZT1UgQ0FOTk9UIE1BS0UgSVQgRFJJTksu",
+  "key": "NCABQRKIYUXJZDGHWMLOFTSPEV",
+  "given": [
+   3,
+   4,
+   16,
+   18
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-010",
+  "text": "RVZFUlkgQ0xPVUQgSVMgU1VQUE9TRUQgVE8gSEFWRSBBIFNJTFZFUiBMSU5JTkcgU09NRVdIRVJFLg==",
+  "key": "GKBYFJWCQIXNOUPATDMEHLVZSR",
+  "given": [
+   20
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-011",
+  "text": "RE8gTk9UIEpVREdFIEEgQk9PSyBCWSBJVFMgQ09WRVIsIEhPV0VWRVIgVEVNUFRJTkcgVEhBVCBJUy4=",
+  "key": "MHSVPKZREUTNFOQGXJLAIDCWBY",
+  "given": [
+   14,
+   18,
+   23
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-012",
+  "text": "QSBCSVJEIElOIFRIRSBIQU5EIElTIFdPUlRIIFRXTyBPRiBUSEVNIEhJRElORyBJTiBUSEUgQlVTSC4=",
+  "key": "BLWJAGQERHYMKSUFDZVXPTICON",
+  "given": [
+   10,
+   12
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-013",
+  "text": "V0hFTiBUSEUgQ0FUIElTIEFXQVksIFRIRSBNSUNFIFdJTEwgUExBWSBGT1IgSE9VUlMgT04gRU5ELg==",
+  "key": "QNXRJMBUKVIDWTPYEAHCGZLOFS",
+  "given": [
+   6,
+   17,
+   20
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-014",
+  "text": "TkVWRVIgVFJPVUJMRSBUUk9VQkxFIFVOVElMIFRST1VCTEUgSEFQUEVOUyBUTyBCT1RIRVIgWU9VLg==",
+  "key": "YTOFARQPXDCHGJNBVSMKZLEUWI",
+  "given": [
+   17,
+   23
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-015",
+  "text": "QUNUSU9OUyBTUEVBSyBMT1VERVIgVEhBTiBXT1JEUywgQU5EIExBU1QgQSBHUkVBVCBERUFMIExPTkdFUi4=",
+  "key": "TVIWQXMNJRUKPDAGYSZELCFOBH",
+  "given": [
+   4,
+   15
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-016",
+  "text": "RE8gTk9UIFRIUk9XIFRIRSBCQUJZIE9VVCBXSVRIIFRIRSBCQVRIIFdBVEVSIElOIFlPVVIgSEFTVEUu",
+  "key": "DMFVHZISQKLNREBWJTGXYUOCPA",
+  "given": [
+   1,
+   18
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-017",
+  "text": "VEhFUkUgSVMgTk8gVVNFIENSWUlORyBPVkVSIE1JTEsgVEhBVCBIQVMgSElUIFRIRSBLSVRDSEVOIEZMT09SLg==",
+  "key": "PMZEFYKJSGBOLUCHDXTVRAQIWN",
+  "given": [
+   19
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-018",
+  "text": "R1JFQVQgTUlORFMgVEhJTksgQUxJS0UsIFRIT1VHSCBGT09MUyBTRUxET00gRElGRkVSIEVJVEhFUi4=",
+  "key": "FXDTQCMGJHLZESYROUBAVIPKWN",
+  "given": [
+   1,
+   13
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-019",
+  "text": "RE8gTk9UIFBVVCBBTEwgT0YgWU9VUiBFR0dTIElOVE8gT05FIEJBU0tFVCwgSE9XRVZFUiBTVFVSRFku",
+  "key": "QJXAIDHZBWRGVYUKNPESLFCMTO",
+  "given": [
+   9,
+   18,
+   26
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-020",
+  "text": "QSBXQVRDSEVEIFBPVCBORVZFUiBCT0lMUywgQU5EIEEgV0FUQ0hFRCBDTE9DSyBORVZFUiBNT1ZFUy4=",
+  "key": "GOAYMCSUHQVZNFLTXDPEJWRBIK",
+  "given": [
+   19,
+   20,
+   24,
+   25
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-021",
+  "text": "QU4gT0NUT1BVUyBIQVMgVEhSRUUgSEVBUlRTLCBCTFVFIEJMT09ELCBBTkQgTk8gQk9ORVMgQVQgQUxMLg==",
+  "key": "PSFYMLEUAZHJNKCRIVQGDOXTBW",
+  "given": [
+   9
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-022",
+  "text": "SE9ORVkgTkVWRVIgU1BPSUxTLCBFVkVOIEFGVEVSIFRIT1VTQU5EUyBPRiBZRUFSUyBJTiBBIEpBUi4=",
+  "key": "QHOTFRJLUCMDYGKSWAVXIZEPNB",
+  "given": [
+   7,
+   23
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-023",
+  "text": "U0hBUktTIFdFUkUgU1dJTU1JTkcgSU4gVEhFIFNFQSBMT05HIEJFRk9SRSBUUkVFUyBFWElTVEVELg==",
+  "key": "JEXVTIYWBKLSFZGAOHPNMCQDUR",
+  "given": [
+   2,
+   10
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-024",
+  "text": "V0FURVIgRVhQQU5EUyBBUyBJVCBGUkVFWkVTLCBXSElDSCBJUyBUSEUgUkVBU09OIElDRSBGTE9BVFMu",
+  "key": "TNGBDVKWYMUFXQZERHPIOLSAJC",
+  "given": [
+   12,
+   16
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-025",
+  "text": "QSBTSU5HTEUgQk9MVCBPRiBMSUdIVE5JTkcgSVMgSE9UVEVSIFRIQU4gVEhFIFNVUkZBQ0UgT0YgVEhFIFNVTi4=",
+  "key": "HXAQVEJUTSGMBICKYONZPDFLRW",
+  "given": [
+   9,
+   13
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-026",
+  "text": "QkFOQU5BUyBDT1VOVCBBUyBCRVJSSUVTLCBCVVQgU1RSQVdCRVJSSUVTIERPIE5PVCBDT1VOVCBBVCBBTEwu",
+  "key": "XRVMSQEUGBZTWHLAPJCOFKDYIN",
+  "given": [
+   16,
+   19,
+   23
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-027",
+  "text": "U09VTkQgVFJBVkVMUyBBQk9VVCBGT1VSIFRJTUVTIEZBU1RFUiBJTiBXQVRFUiBUSEFOIElOIEFJUi4=",
+  "key": "BONVCHQIFEDXJGMYAKLPTWUZSR",
+  "given": [
+   21,
+   22
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-028",
+  "text": "VEhFIE1PT04gRFJJRlRTIEEgTElUVExFIEZVUlRIRVIgQVdBWSBGUk9NIFVTIEVWRVJZIFNJTkdMRSBZRUFSLg==",
+  "key": "RWZHQTNBLUCKIDGXJAFVPMYOES",
+  "given": [
+   25
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-029",
+  "text": "QkVFUyBBUkUgQUJMRSBUTyBURUxMIEhVTUFOIEZBQ0VTIEFQQVJULCBXSElDSCBTRUVNUyBVTkxJS0VMWS4=",
+  "key": "PXDQGSCUJHRWTKBMOVAIENLYZF",
+  "given": [
+   1,
+   21,
+   26
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-030",
+  "text": "T04gVEhFIFBMQU5FVCBORUFSRVNUIFRIRSBTVU4sIE9ORSBEQVkgTEFTVFMgTE9OR0VSIFRIQU4gQSBZRUFSLg==",
+  "key": "GWDJLXHIKSVYEZABFQNCPOTRMU",
+  "given": [
+   3,
+   12,
+   13,
+   26
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-031",
+  "text": "VFJFRVMgV0FSTiBFQUNIIE9USEVSIEFCT1VUIEhVTkdSWSBJTlNFQ1RTIFRIUk9VR0ggVEhFSVIgUk9PVFMu",
+  "key": "LQANJMUVZCTKWDFSGYIEXROBPH",
+  "given": [
+   11,
+   13
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-032",
+  "text": "VEhFIERFRVBFU1QgVFJFTkNIIElOIFRIRSBPQ0VBTiBJUyBERUVQRVIgVEhBTiBBTlkgTU9VTlRBSU4gSVMgVEFMTC4=",
+  "key": "TQHIKZROPFXYLVNUEJMCASBGDW",
+  "given": [
+   17,
+   19
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-033",
+  "text": "QSBIVU1NSU5HQklSRCBIQVMgVE8gRUFUIEFMTU9TVCBDT05TVEFOVExZIFRPIFNUQVkgSU4gVEhFIEFJUi4=",
+  "key": "UMVGBCZNLQHAKPDSWXYETRJIFO",
+  "given": [
+   21
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-034",
+  "text": "WU9VUiBCT05FUyBBUkUsIFdFSUdIVCBGT1IgV0VJR0hULCBTVFJPTkdFUiBUSEFOIFNPTElEIFNURUVMLg==",
+  "key": "VSWZJHXOMFRCPQKEAUTGBYDLIN",
+  "given": [
+   16,
+   21,
+   22
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-035",
+  "text": "QlVUVEVSRkxJRVMgVEFTVEUgVEhFIFdPUkxEIFVTSU5HIFNFTlNPUlMgSU4gVEhFSVIgT1dOIEZFRVQu",
+  "key": "JUTWBPMECYGFSIHKZLVXDQRONA",
+  "given": [
+   8
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-036",
+  "text": "QSBDTE9VRCBDQU4gV0VJR0ggTUFOWSBIVU5EUkVEUyBPRiBUT05TIEFORCBTVElMTCBGTE9BVCBBQk9WRSBVUy4=",
+  "key": "EPOFJTCIDNUHQLKXZSGMVYBAWR",
+  "given": [
+   20,
+   24
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-037",
+  "text": "VEhFIE1JRERMRSBPRiBPVVIgUExBTkVUIElTIEFCT1VUIEFTIEhPVCBBUyBUSEUgU1VSRkFDRSBPRiBUSEUgU1VOLg==",
+  "key": "CGHYDILQWNJEKZUTAVXPRMFOSB",
+  "given": [
+   16,
+   22
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-038",
+  "text": "U0VBIE9UVEVSUyBIT0xEIEhBTkRTIFdISUxFIFNMRUVQSU5HIFNPIFRIRVkgRE8gTk9UIERSSUZUIEFQQVJULg==",
+  "key": "UFKOPZQCRTAXNWIJVMGHYLDSEB",
+  "given": [
+   21,
+   25
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-039",
+  "text": "QSBEQVkgT04gT1VSIFBMQU5FVCBJUyBTTE9XTFkgR0VUVElORyBMT05HRVIgQVMgVEhFIE1PT04gUkVUUkVBVFMu",
+  "key": "ZWMULJNBGKPIXTEHFSRDAYVQCO",
+  "given": [
+   3,
+   20,
+   26
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-040",
+  "text": "T1dMUyBDQU5OT1QgTU9WRSBUSEVJUiBFWUVTLCBTTyBUSEVZIFRVUk4gVEhFSVIgV0hPTEUgSEVBRCBJTlNURUFELg==",
+  "key": "LXBGSIRYHFUZAJNWVEOMQDTPCK",
+  "given": [
+   17,
+   18,
+   20
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-041",
+  "text": "U09NRSBUUkVFUyBBTElWRSBUT0RBWSBXRVJFIFNFRURMSU5HUyBCRUZPUkUgVEhFIFBZUkFNSURTIFdFUkUgQlVJTFQu",
+  "key": "RAVBOQLMFZDJCKWUNYESPGXIHT",
+  "given": [
+   3,
+   19
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-042",
+  "text": "VEhFIE9DRUFOUyBIT0xEIEFMTU9TVCBBTEwgT0YgVEhFIFdBVEVSIE9OIFRIRSBFTlRJUkUgUExBTkVULg==",
+  "key": "XGTNMHWEJVCQAPDYSOKZBLUFRI",
+  "given": [
+   8,
+   15
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-043",
+  "text": "SUNFIElTIFNMSVBQRVJZIEJFQ0FVU0UgQSBUSElOIEZJTE0gT0YgV0FURVIgRk9STVMgT04gVE9QIE9GIElULg==",
+  "key": "UXJAHCWBMTIPZDVFYOKLQRNESG",
+  "given": [
+   5,
+   11
+  ],
+  "added": "2026-07-27"
+ },
+ {
+  "id": "CG-044",
+  "text": "R0xBU1MgSVMgTk9UIEEgTElRVUlELCBXSEFURVZFUiBZT1VSIFRFQUNIRVIgTUFZIEhBVkUgVE9MRCBZT1Uu",
+  "key": "GLWBPUSDTCVNAOJKHFIMEXZYRQ",
+  "given": [
+   12,
+   13,
+   20
+  ],
+  "added": "2026-07-27"
+ }
+]
