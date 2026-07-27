@@ -25,7 +25,7 @@ import {
   type Puzzle,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, saveProgress, slotKey } from "@/lib/progress";
+import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import Celebration from "./Celebration";
 
 const GAME_ID = "codeword";
@@ -41,6 +41,7 @@ export default function CodewordBoard({
   const [state, setState] = useState<State>(() => initialState(puzzle, slots));
   const [restoring, setRestoring] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
+  const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const solvedOnce = useRef(false);
 
   const slot = useMemo(
@@ -69,7 +70,7 @@ export default function CodewordBoard({
   useEffect(() => {
     if (restoring) return;
     const id = setTimeout(() => {
-      void saveProgress(slot, GAME_ID, freeEntries(state), solved);
+      void saveProgress(slot, GAME_ID, freeEntries(state), solved).then(setSaved);
     }, 400); // debounce: typing a word should not be a write per letter
     return () => clearTimeout(id);
   }, [state, slot, solved, restoring]);
@@ -312,7 +313,16 @@ export default function CodewordBoard({
 
       <footer>
         <span>Codeword · 13 × 13 · every letter a–z appears</span>
-        <span>Entries save automatically</span>
+        {/* say where the save actually went, rather than claiming more than happened */}
+        <span title={saved && "error" in saved ? saved.error : undefined}>
+          {!saved
+            ? "Entries save automatically"
+            : "error" in saved
+              ? "Saved on this device — sync failed"
+              : saved.where === "cloud"
+                ? "Saved to your account"
+                : "Saved on this device"}
+        </span>
       </footer>
     </div>
   );

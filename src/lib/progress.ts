@@ -23,6 +23,12 @@ export type SaveRecord = {
   updatedAt: string;
 };
 
+/** Where a save actually landed, so the UI can stop claiming more than it did. */
+export type SaveOutcome =
+  | { where: "local" }
+  | { where: "cloud" }
+  | { where: "local"; error: string };
+
 const LOCAL_PREFIX = "playhouse:progress:";
 
 export function fingerprint(grid: number[][], key: string): string {
@@ -74,11 +80,17 @@ function allLocal(): { slot: string; rec: SaveRecord }[] {
 
 /* ── cloud ──────────────────────────────────────────────────────────────── */
 
+/**
+ * `getSession` reads the session locally; `getUser` round-trips to validate it.
+ * Saves are debounced to every 400ms of typing, so a network call per save is
+ * both slow and a way to lose writes when the network hiccups. The server
+ * enforces the real check anyway — row-level security does not trust this id.
+ */
 async function currentUserId(): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data } = await sb.auth.getUser();
-  return data.user?.id ?? null;
+  const { data } = await sb.auth.getSession();
+  return data.session?.user?.id ?? null;
 }
 
 /* ── public API ─────────────────────────────────────────────────────────── */
@@ -96,6 +108,7 @@ export async function loadProgress(slot: string): Promise<SaveRecord | null> {
     .eq("slot", slot)
     .maybeSingle();
 
+  if (error) console.error("[playhouse] cloud load failed:", error.message, error);
   if (error || !data) return local;
   const cloud: SaveRecord = {
     entries: (data.entries ?? {}) as Entries,
@@ -112,15 +125,15 @@ export async function saveProgress(
   gameId: string,
   entries: Entries,
   solved: boolean
-): Promise<void> {
+): Promise<SaveOutcome> {
   const rec: SaveRecord = { entries, solved, updatedAt: new Date().toISOString() };
   writeLocal(slot, rec);
 
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) return { where: "local" };
 
   const sb = getSupabase()!;
-  await sb.from("game_progress").upsert(
+  const { error } = await sb.from("game_progress").upsert(
     {
       user_id: uid,
       slot,
@@ -131,6 +144,14 @@ export async function saveProgress(
     },
     { onConflict: "user_id,slot" }
   );
+
+  // Swallowing this is how "it doesn't seem to be saving" happens: the letters
+  // are safe locally, so nothing looks broken until you open another device.
+  if (error) {
+    console.error("[playhouse] cloud save failed:", error.message, error);
+    return { where: "local", error: error.message };
+  }
+  return { where: "cloud" };
 }
 
 /**
@@ -170,7 +191,11 @@ export async function mergeLocalIntoCloud(gameId: string): Promise<number> {
     }));
 
   if (!rows.length) return 0;
-  await sb.from("game_progress").upsert(rows, { onConflict: "user_id,slot" });
+  const { error } = await sb.from("game_progress").upsert(rows, { onConflict: "user_id,slot" });
+  if (error) {
+    console.error("[playhouse] syncing local progress failed:", error.message, error);
+    return 0;
+  }
   return rows.length;
 }
 
