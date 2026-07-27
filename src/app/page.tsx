@@ -25,10 +25,13 @@ const GAMES: Game[] = [
     blurb:
       "Every number is a letter. Crack the code from four starters and fill the grid. Each one has exactly one solution.",
   },
+  // Described by its mechanic rather than named. "Wordle" is a New York Times
+  // trademark and this is a public page; the real name is still to be picked.
   {
     meta: "Next up",
-    title: "Wordle",
-    blurb: "Six guesses, five letters — an archive to work through rather than one a day.",
+    title: "Word guessing",
+    blurb:
+      "Six guesses to find a hidden five-letter word — an archive to work through rather than one a day.",
   },
   {
     meta: "In the works",
