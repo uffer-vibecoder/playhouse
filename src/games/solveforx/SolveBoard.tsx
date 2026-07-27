@@ -15,12 +15,14 @@ import {
   moveTo,
   recordFirstScore,
   render,
+  renderPieces,
   rightCount,
   shareGrid,
   step,
   toSave,
   toggleSign,
   typeDigit,
+  typePoint,
   type Puzzle,
   type Saved,
   type State,
@@ -28,11 +30,20 @@ import {
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
+import Scratch from "./Scratch";
+import Calculator from "./Calculator";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "solveforx";
 
 const KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "−", "0", "⌫"];
+
+/**
+ * The harder tiers answer to the hundredth, so they need a point. The easy tier
+ * does not, and showing one there would suggest its answers might not be whole
+ * — every one of them is, by construction.
+ */
+const KEYS_DECIMAL = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "−", "0", ".", "⌫"];
 
 export default function SolveBoard({
   puzzle,
@@ -128,7 +139,12 @@ export default function SolveBoard({
 
   const press = useCallback(
     (k: string) =>
-      edit((s) => (k === "⌫" ? backspace(s) : k === "−" ? toggleSign(s) : typeDigit(s, k))),
+      edit((s) =>
+        k === "⌫" ? backspace(s)
+        : k === "−" ? toggleSign(s)
+        : k === "." ? typePoint(s)
+        : typeDigit(s, k)
+      ),
     [edit]
   );
 
@@ -142,6 +158,10 @@ export default function SolveBoard({
         edit((s) => typeDigit(s, e.key));
       } else if (e.key === "-") {
         edit(toggleSign);
+      } else if (e.key === "." || e.key === ",") {
+        // a comma too: on several keyboard layouts that is the decimal key, and
+        // silently ignoring it looks like the field is broken
+        edit(typePoint);
       } else if (e.key === "Backspace" || e.key === "Delete") {
         edit(backspace);
       } else if (e.key === "ArrowDown" || e.key === "Enter") {
@@ -194,8 +214,11 @@ export default function SolveBoard({
         </summary>
         <div className="disclosure-body">
           <p className="intro">
-            Work out what <b>x</b> has to be for each equation to balance. Tap a line, then type
-            your answer — every answer is a whole number, so nothing here needs a fraction.
+            Work out what the letter has to be for each equation to balance. Tap a line, then
+            type your answer.{" "}
+            {puzzle.tier
+              ? "Answers here are not always whole — round to the nearest hundredth when one is not, and 0.33 or 0.333 will both do for a third."
+              : "Every answer is a whole number, so nothing here needs a fraction."}
           </p>
           <p className="intro">
             <b>Check</b> marks anything that is answered but not right yet, and leaves blanks
@@ -222,7 +245,22 @@ export default function SolveBoard({
                   onClick={() => setState((s) => moveTo(s, i))}
                 >
                   <span className="sx-n">{i + 1}</span>
-                  <span className="sx-eq">{render(p)}</span>
+                  <span className="sx-eq" aria-label={render(p)}>
+                    {/* stacked rather than inline: `(20 + v)/15` set on one
+                        line stops reading as division and starts reading as a
+                        typo. The flat form goes on aria-label, so a screen
+                        reader still hears one sentence. */}
+                    {renderPieces(p).map((piece, k) =>
+                      piece.kind === "text" ? (
+                        <span key={k}>{piece.text}</span>
+                      ) : (
+                        <span className="sx-frac" key={k}>
+                          <span className="sx-over">{piece.over}</span>
+                          <span className="sx-under">{piece.under}</span>
+                        </span>
+                      )
+                    )}
+                  </span>
                   <span className="sx-ans">
                     {state.answers[i] || <span className="sx-hint">x</span>}
                   </span>
@@ -243,12 +281,21 @@ export default function SolveBoard({
       </div>
 
       <div className="sx-pad">
-        {KEYS.map((k) => (
+        {(puzzle.tier ? KEYS_DECIMAL : KEYS).map((k) => (
           <button key={k} className="key" onClick={() => press(k)}>
             {k}
           </button>
         ))}
       </div>
+
+      {/* Both belong to the harder tiers: the easy one is a line of mental
+          arithmetic and a canvas under it would be clutter. */}
+      {puzzle.tier && (
+        <>
+          <Scratch />
+          <Calculator />
+        </>
+      )}
 
       <div className="tools">
         <button className="tool" onClick={runCheck}>

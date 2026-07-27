@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SolveBoard from "./SolveBoard";
-import type { Puzzle } from "./engine";
+import type { Puzzle, Tier } from "./engine";
 import AuthBar from "@/components/AuthBar";
 import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
 import { SITE } from "@/lib/site";
@@ -33,6 +33,17 @@ export default function SolveGame({ puzzles }: { puzzles: Puzzle[] }) {
       }),
     []
   );
+  /**
+   * Which tier the picker is showing. 240 sets across three bands is a wall of
+   * pills otherwise, and the bands are genuinely different games rather than
+   * degrees of the same one.
+   */
+  const [tier, setTier] = useState<Tier | null>(null);
+  const matches = useCallback(
+    (p: Puzzle) => tier === null || (p.tier ?? "easy") === tier,
+    [tier]
+  );
+
   const [solved, setSolved] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -47,11 +58,30 @@ export default function SolveGame({ puzzles }: { puzzles: Puzzle[] }) {
     setSolved((prev) => (prev.has(slot) ? prev : new Set(prev).add(slot)));
   }, []);
 
-  /** Wraps at the end, so the last puzzle still has somewhere to go. */
-  const goNext = useCallback(
-    () => setIndex((i) => (i + 1) % puzzles.length),
-    [puzzles.length, setIndex]
-  );
+  const countFor = (t: Tier | null) =>
+    puzzles.filter((p) => t === null || (p.tier ?? "easy") === t).length;
+
+  /**
+   * Switching band moves you to the first set in it. Staying put would leave
+   * the filter saying "hard" over a board that is plainly not.
+   */
+  const chooseTier = (t: Tier | null) => {
+    setTier(t);
+    const visible = puzzles.map((p, i) => [p, i] as const).filter(([p]) =>
+      t === null || (p.tier ?? "easy") === t
+    );
+    if (!visible.some(([, i]) => i === index) && visible.length) setIndex(visible[0][1]);
+  };
+
+  /** Wraps at the end, within whichever band the picker is showing. */
+  const goNext = useCallback(() => {
+    setIndex((i) => {
+      const visible = puzzles.map((p, n) => [p, n] as const).filter(([p]) => matches(p));
+      if (!visible.length) return i;
+      const at = visible.findIndex(([, n]) => n === i);
+      return visible[(at + 1) % visible.length][1];
+    });
+  }, [puzzles, matches, setIndex]);
 
   const slotOf = (p: Puzzle) =>
     slotKey(GAME_ID, p.id, fingerprint([[p.seed]], String(p.seed)));
@@ -80,13 +110,26 @@ export default function SolveGame({ puzzles }: { puzzles: Puzzle[] }) {
             <span className="chev" />
             Choose a set
             <span className="sum-note">
-              {puzzle.id.replace("SX-", "NO. ")} of {puzzles.length}
+              {puzzle.id.replace("SX-", "NO. ")} · {puzzle.tier ?? "easy"}
               {doneCount ? ` · ${doneCount} done` : ""}
             </span>
           </summary>
           <div className="disclosure-body">
+            <div className="filters">
+              {([null, "easy", "medium", "hard"] as (Tier | null)[]).map((t) => (
+                <button
+                  key={t ?? "all"}
+                  className="filter"
+                  aria-pressed={tier === t}
+                  onClick={() => chooseTier(t)}
+                >
+                  {t === null ? "All" : t[0].toUpperCase() + t.slice(1)} {countFor(t)}
+                </button>
+              ))}
+            </div>
             <div className="tabs">
-              {puzzles.map((p, i) => (
+              {puzzles.map((p, i) =>
+                matches(p) ? (
                 <button
                   key={p.id}
                   className="tab"
@@ -95,12 +138,13 @@ export default function SolveGame({ puzzles }: { puzzles: Puzzle[] }) {
                     setIndex(i);
                     setPickerOpen(false);
                   }}
-                  title={solved.has(slotOf(p)) ? "Finished" : undefined}
+                  title={`${p.tier ?? "easy"}${solved.has(slotOf(p)) ? " · finished" : ""}`}
                 >
                   {p.id.replace("SX-", "NO. ")}
                   {solved.has(slotOf(p)) ? " ✓" : ""}
                 </button>
-              ))}
+                ) : null
+              )}
             </div>
           </div>
         </details>

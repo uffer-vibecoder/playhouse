@@ -573,6 +573,52 @@ footer{
    Everything interactive drops away; the on-screen selection does too, so the
    sheet reads as a clean puzzle rather than a screenshot of one in progress.
 ── */
+/* ── the harder tiers: stacked fractions, scratch paper, a calculator ────────
+   A fraction set inline — `(20 + v)/15` — stops reading as division and starts
+   reading as a typo, so the hard tier stacks it: numerator, rule, denominator,
+   in a flex column sized to sit on the equation's baseline. That is CSS rather
+   than a maths library, and it has to hold up at the phone type sizes, which is
+   what the 375px rules at the bottom are for.
+── */
+.sx-frac{
+  display:inline-flex; flex-direction:column; align-items:center;
+  vertical-align:middle; margin:0 3px; line-height:1.05;
+}
+.sx-over{padding:0 3px; font-size:.66em}
+.sx-under{padding:0 3px; font-size:.66em; border-top:1.5px solid currentColor}
+
+.sx-scratch{margin:14px 0 6px; border:1.5px solid var(--rule); border-radius:12px; overflow:hidden}
+.sx-scratchhead{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  padding:8px 12px; background:var(--tile);
+  font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted);
+}
+.sx-scratchnote{font-weight:400; letter-spacing:.2px; text-transform:none}
+.sx-canvas{
+  display:block; width:100%; height:190px; background:#FFFFFF;
+  cursor:crosshair; touch-action:none;   /* the stroke is ours, not the page's scroll */
+}
+.sx-scratchtools{display:flex; gap:8px; padding:8px 12px; background:var(--tile)}
+
+.sx-calc{display:grid; gap:8px; max-width:280px; margin:4px auto 0}
+.sx-calcshow{
+  display:block; padding:10px 12px; text-align:right;
+  border:1.5px solid var(--ink); border-radius:8px; background:#FFFFFF;
+  font-family:var(--display); font-weight:600; font-size:22px;
+  font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis;
+}
+.sx-calcpad{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.sx-calcpad .key{height:42px; font-size:17px}
+.sx-calcpad .key[aria-pressed="true"]{background:var(--fill-tint); border-color:var(--fill)}
+.sx-calcwide{grid-column:span 2}
+.sx-calcnote{margin:0; font-size:10px; line-height:1.5; color:var(--muted); text-align:center}
+
+@media (max-width:560px){
+  .sx-canvas{height:150px}
+  /* fractions are the first thing to break as the type shrinks */
+  .sx-over,.sx-under{font-size:.6em; padding:0 2px}
+}
+
 /* ── colour blocks ───────────────────────────────────────────────────────────
    Blocks slide out through gates that match them.
 

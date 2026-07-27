@@ -274,3 +274,144 @@ test("a nonsense first score in a save is discarded", () => {
     assert.equal(s.firstScore, null, `accepted ${bad}`);
   }
 });
+
+/* ── the harder tiers ─────────────────────────────────────────────────────── */
+
+import { readFileSync } from "node:fs";
+import { renderPieces, typePoint, type Tier } from "../src/games/solveforx/engine.ts";
+import puzzleFile from "../src/data/solveforx.json" with { type: "json" };
+
+/**
+ * The regression that matters more than any other in this file.
+ *
+ * The archive stores a seed and nothing else, so an edit to the easy generator
+ * changes the equations behind ids people have already answered — their saved
+ * answers would restore onto problems that no longer exist. 1200 equations,
+ * captured before the harder tiers were written.
+ */
+test("every shipped easy set is exactly what it was", () => {
+  const snap = JSON.parse(readFileSync("test/solveforx.snapshot.json", "utf8"));
+  assert.equal(snap.length, 120);
+  for (const set of snap) {
+    const puzzle = (puzzleFile as { id: string; seed: number }[]).find((p) => p.id === set.id)!;
+    const now = generate(puzzle);
+    assert.equal(now.length, set.problems.length, set.id);
+    now.forEach((p, i) => {
+      assert.equal(render(p), set.problems[i].eq, `${set.id} #${i + 1}`);
+      assert.equal(p.x, set.problems[i].x, `${set.id} #${i + 1} answer`);
+    });
+  }
+});
+
+const sample = (tier: Tier, n = 250) =>
+  Array.from({ length: n }, (_, i) => generate({ id: `T-${i}`, seed: 90001 + i * 37, tier }));
+
+for (const tier of ["medium", "hard"] as Tier[]) {
+  test(`${tier}: every equation balances when the answer is put back`, () => {
+    for (const problems of sample(tier)) {
+      assert.equal(problems.length, PROBLEMS);
+      for (const p of problems) {
+        // the exact fraction is the answer; check it against the equation's
+        // own coefficients rather than against the float
+        assert.ok(p.q !== undefined && p.n !== undefined, `${p.form} carries no fraction`);
+        assert.ok(p.q! > 0, "denominator normalised positive");
+        const x = p.n! / p.q!;
+        const v = p.v ?? "x";
+        const d = p.d ?? 0;
+        const e = p.e ?? 0;
+        let left: number, right: number;
+        switch (p.form) {
+          case "like-terms": left = p.a * x + p.b + p.c * x; right = d; break;
+          case "flip":       left = p.c; right = p.a * x + p.b * x; break;
+          case "dist-sum":   left = p.a * (p.b + p.c * x); right = d; break;
+          case "dist-diff":  left = p.a * (p.b * x - p.c); right = d; break;
+          case "dist-outer": left = d; right = p.b + p.a * (x - p.c); break;
+          case "collect":    left = p.a * x + p.b + p.c; right = d; break;
+          case "both-sides": left = p.a * (p.b * x + p.c); right = d + e * x; break;
+          case "over":       left = (p.b + x) / p.a; right = p.c; break;
+          case "minus-over": left = (p.b - x) / p.a; right = p.c; break;
+          case "frac-coef":  left = (p.a / p.b) * x - p.c; right = d; break;
+          case "frac-outer": left = p.c + (p.a / p.b) * x; right = d; break;
+          case "steep":      left = p.a * x - p.b; right = p.c; break;
+          default: throw new Error(`unexpected form ${p.form} for ${v}`);
+        }
+        assert.ok(
+          Math.abs(left - right) < 1e-9,
+          `${p.form}: ${render(p)} does not balance at x = ${x}`
+        );
+      }
+    }
+  });
+
+  test(`${tier}: the variable never cancels out`, () => {
+    for (const problems of sample(tier)) {
+      for (const p of problems) {
+        assert.ok(Number.isFinite(p.x), `${render(p)} has no single answer`);
+      }
+    }
+  });
+
+  test(`${tier}: nothing renders a stray double sign`, () => {
+    for (const problems of sample(tier, 60)) {
+      for (const p of problems) {
+        const eq = render(p);
+        assert.ok(!/[+−] *[+−] *[+−]/.test(eq), `${eq} stacks signs`);
+        assert.ok(!eq.includes("undefined"), `${eq} has a hole in it`);
+        assert.ok(eq.includes("="), `${eq} is not an equation`);
+      }
+    }
+  });
+}
+
+test("a third is satisfied by two decimals or by three, but not by the wrong one", () => {
+  const third: Problem = { form: "steep", a: 3, b: 0, c: 1, n: 1, q: 3, x: 1 / 3 };
+  assert.ok(isRight(third, "0.33"), "two places is what the worksheet asks for");
+  assert.ok(isRight(third, "0.333"), "more precision is not an error");
+  assert.ok(!isRight(third, "0.34"), "a different number is a different number");
+  assert.ok(!isRight(third, "0.3"), "one place is outside half a hundredth");
+});
+
+test("the easy tier stays exact, so nearly-right is still wrong", () => {
+  const [p] = generate({ id: "E", seed: 4242 });
+  assert.ok(isRight(p, String(p.x)));
+  assert.ok(!isRight(p, String(p.x + 0.001)), "no tolerance where answers are whole");
+});
+
+test("a blank, a lone minus and a lone point are not answers", () => {
+  const p: Problem = { form: "steep", a: 2, b: 0, c: 4, n: 2, q: 1, x: 2 };
+  for (const junk of ["", " ", "-", ".", "-."]) assert.ok(!isRight(p, junk), `"${junk}"`);
+});
+
+test("a decimal answer survives a reload", () => {
+  const restored = initialState({ answers: ["-1.43", "0.72", "45", "", "0.33", "", "", "", "", ""] });
+  assert.equal(restored.answers[0], "-1.43", "the old guard would have eaten this");
+  assert.equal(restored.answers[1], "0.72");
+  assert.equal(restored.answers[4], "0.33");
+});
+
+test("the point goes in once, and never first", () => {
+  let s = initialState();
+  s = typePoint(s);
+  assert.equal(s.answers[0], "", "nothing to put a point after yet");
+  s = typeDigit(s, "1");
+  s = typePoint(s);
+  s = typePoint(s);
+  assert.equal(s.answers[0], "1.", "one point only");
+  s = typeDigit(s, "4");
+  s = typeDigit(s, "3");
+  s = typeDigit(s, "9");
+  assert.equal(s.answers[0], "1.43", "two places, then it stops");
+});
+
+test("hard sets stack their fractions rather than setting them inline", () => {
+  const problems = generate({ id: "H", seed: 777, tier: "hard" });
+  const stacked = problems.filter((p) => renderPieces(p).some((piece) => piece.kind === "frac"));
+  assert.ok(stacked.length > 0, "the hard tier is fractions or it is nothing");
+  for (const p of stacked) {
+    for (const piece of renderPieces(p)) {
+      if (piece.kind === "frac") {
+        assert.ok(piece.over.length > 0 && piece.under.length > 0, render(p));
+      }
+    }
+  }
+});

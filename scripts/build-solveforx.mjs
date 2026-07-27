@@ -19,16 +19,38 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const COUNT = Number(process.argv[2] ?? 120);
+/**
+ * The three tiers, in the order they were added.
+ *
+ * Easy stays at exactly 120 and its seeds are unchanged, because those sets
+ * have shipped and are keyed by id. The two harder tiers append after them, so
+ * a set's number never moves — the same rule every archive here follows.
+ *
+ * The tier is written onto the harder entries only. Absent means easy, which is
+ * what the 120 already in the file say, and it is what the engine dispatches on.
+ */
+const TIERS = [
+  { tier: undefined, count: 120 },
+  { tier: "medium", count: 60 },
+  { tier: "hard", count: 60 },
+];
+
 const added = new Date().toISOString().slice(0, 10);
 
 const seedFor = (n) => Math.imul(n + 1, 2654435761) >>> 0;
 
-const archive = Array.from({ length: COUNT }, (_, i) => ({
-  id: `SX-${String(i + 1).padStart(3, "0")}`,
-  seed: seedFor(i),
-  added,
-}));
+const archive = [];
+for (const { tier, count } of TIERS) {
+  for (let i = 0; i < count; i++) {
+    const n = archive.length;
+    archive.push({
+      id: `SX-${String(n + 1).padStart(3, "0")}`,
+      seed: seedFor(n),
+      ...(tier ? { tier } : {}),
+      added,
+    });
+  }
+}
 
 const seeds = new Set(archive.map((p) => p.seed));
 if (seeds.size !== archive.length) {
@@ -41,4 +63,5 @@ writeFileSync(
   JSON.stringify(archive, null, 1) + "\n"
 );
 console.log(`Wrote ${archive.length} puzzles to src/data/solveforx.json`);
-console.log(`First seeds: ${archive.slice(0, 4).map((p) => p.seed).join(", ")}`);
+const byTier = archive.reduce((m, p) => ((m[p.tier ?? "easy"] = (m[p.tier ?? "easy"] ?? 0) + 1), m), {});
+console.log("  " + Object.entries(byTier).map(([t, n]) => `${n} ${t}`).join(", "));
