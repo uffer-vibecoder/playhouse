@@ -35,10 +35,17 @@ const GAMES: Game[] = [
       "Six guesses to find a hidden five-letter word — an archive to work through rather than one a day.",
   },
   {
-    meta: "In the works",
-    title: "Crosswords",
+    href: "/games/solveforx",
+    meta: "120 sets",
+    title: "Solve for x",
     blurb:
-      "Themed and gentle: Pixar films, pop bands, pop culture. Written by hand, so they take longer.",
+      "Ten equations a set, easing from one step to two. Every answer is a whole number.",
+  },
+  {
+    meta: "In the works",
+    title: "Cryptogram",
+    blurb:
+      "A sentence hidden behind numbers — the same trick as Codeword, on a line of text instead of a grid.",
   },
 ];
 
