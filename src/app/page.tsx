@@ -42,6 +42,13 @@ const GAMES: Game[] = [
       "Ten equations a set, easing from one step to two. Every answer is a whole number.",
   },
   {
+    href: "/games/slide",
+    meta: "120 boards",
+    title: "Sliding tiles",
+    blurb:
+      "Fifteen numbers and a gap. Push them back into order — every board here can be solved.",
+  },
+  {
     meta: "In the works",
     title: "Cryptogram",
     blurb:

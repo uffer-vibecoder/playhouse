@@ -334,6 +334,42 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   .sx-ans{min-width:54px; font-size:17px}
 }
 
+/* ── sliding tiles ───────────────────────────────────────────────────────────
+   Tiles are absolutely positioned and animated, not laid out in a grid. Each
+   keeps its DOM node for the life of the puzzle and only its offset changes, so
+   a move reads as a slide. Re-sorting a grid would teleport them, and a sliding
+   puzzle that does not slide feels broken.
+── */
+.sl-wrap{position:relative; margin:14px 0 10px}
+.sl-board{
+  position:relative; width:100%; max-width:340px; margin:0 auto;
+  aspect-ratio:1; background:var(--tile);
+  border:2px solid var(--ink); border-radius:14px; padding:6px;
+}
+.sl-tile{
+  position:absolute; width:25%; height:25%; margin:0; padding:6px;
+  display:grid; place-items:center;
+  font-family:var(--display); font-weight:600; font-size:clamp(18px,6.5vw,26px);
+  font-variant-numeric:tabular-nums;
+  color:var(--ink); background:#FFFFFF; cursor:pointer;
+  border:2px solid var(--underline); border-radius:10px;
+  transition:left .16s cubic-bezier(.2,.8,.3,1), top .16s cubic-bezier(.2,.8,.3,1);
+}
+/* the padding on the board is the gutter; inset each tile inside its quarter */
+.sl-tile{transform:scale(.94)}
+.sl-tile:hover{border-color:var(--accent)}
+.sl-tile:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px}
+/* already where it belongs — quiet confirmation, not a score */
+.sl-tile.home{background:var(--accent-tint); border-color:var(--accent)}
+.sl-tile.moved{border-color:var(--ink)}
+
+@media (prefers-reduced-motion: reduce){
+  .sl-tile{transition:none}
+}
+@media (max-width:560px){
+  .sl-board{max-width:300px}
+}
+
 /* footer */
 footer{
   border-top:1.5px solid var(--rule); margin-top:20px; padding-top:12px;
