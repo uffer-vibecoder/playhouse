@@ -302,6 +302,43 @@ export async function loadGameSaves<T = unknown>(
   return out;
 }
 
+/**
+ * Record that a puzzle was finished.
+ *
+ * A separate table from the saves, and the reason is the whole design: a save
+ * holds the player's letters, which once solved is the answer, and row-level
+ * security is row-level rather than column-level. Anything a partner is allowed
+ * to read has to live somewhere that structurally cannot contain a solution.
+ *
+ * So `summary` carries facts about the attempt — guesses used, a score out of
+ * ten — and never the entries. That invariant is written into the migration
+ * too; this is the only code that writes the table, so this is where it holds.
+ *
+ * Insert-if-absent rather than upsert: `completed_at` should mean the first
+ * time this was finished, and replaying a puzzle should not rewrite history.
+ * Local play records nothing, because a result is a thing you compare with
+ * someone and there is nobody to compare with until you sign in.
+ */
+export async function recordResult(
+  slot: string,
+  gameId: string,
+  summary: Record<string, unknown> = {},
+  elapsedMs: number | null = null
+): Promise<void> {
+  if (!supabaseConfigured) return;
+  const uid = await currentUserId();
+  if (!uid) return;
+
+  const sb = getSupabase()!;
+  const { error } = await sb.from("game_results").upsert(
+    { user_id: uid, slot, game_id: gameId, elapsed_ms: elapsedMs, summary },
+    { onConflict: "user_id,slot", ignoreDuplicates: true }
+  );
+  // Not surfaced in the UI: the puzzle is solved and the save already holds
+  // that. A failure here costs a row in the record, not the player's work.
+  if (error) console.error("[results] recording a finish failed:", error.message, error);
+}
+
 /** Where a player left off: the most recently touched puzzle they have not finished. */
 export type Bookmark = { slot: string; gameId: string; puzzleId: string; updatedAt: string };
 

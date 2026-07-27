@@ -25,7 +25,7 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
 import { SITE } from "@/lib/site";
@@ -95,9 +95,16 @@ export default function SolveBoard({
       solvedOnce.current = true;
       setCelebrate(true);
       onSolved?.(slot);
+      /* The record's copy: facts about the attempt, never the answer. The
+         first attempt's score is what the record averages — and the row is
+         insert-if-absent, so a replay cannot overwrite it either. */
+      void recordResult(slot, GAME_ID, {
+        score: state.firstScore ?? rightCount(problems, state),
+        of: problems.length,
+      });
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot]);
+  }, [solved, restoring, onSolved, slot, problems, state]);
 
   /* marks fade rather than lingering over a row being corrected */
   useEffect(() => {

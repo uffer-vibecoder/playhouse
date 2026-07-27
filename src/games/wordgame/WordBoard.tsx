@@ -21,7 +21,7 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
 import GUESS_WORDS from "@/data/wordgame-guesses.json";
@@ -108,9 +108,11 @@ export default function WordBoard({
       endedOnce.current = true;
       setCelebrate(true);
       onSolved?.(slot);
+      /* the record's copy: facts about the attempt, never the answer */
+      void recordResult(slot, GAME_ID, { guesses: state.guesses.length, of: TRIES, failed: state.status === "lost" });
     }
     if (!solved) endedOnce.current = false;
-  }, [solved, restoring, onSolved, slot]);
+  }, [solved, restoring, onSolved, slot, state.guesses.length, state.status]);
 
   /* a notice ("not a word") should clear itself rather than linger */
   useEffect(() => {

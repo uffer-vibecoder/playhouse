@@ -18,7 +18,7 @@ import {
   type State,
   type Tiles,
 } from "./engine";
-import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import Celebration from "@/components/Celebration";
 
 const GAME_ID = "slide";
@@ -112,9 +112,11 @@ export default function SlideBoard({
       solvedOnce.current = true;
       setCelebrate(true);
       onSolved?.(slot);
+      /* the record's copy: facts about the attempt, never the answer */
+      void recordResult(slot, GAME_ID, { moves: session.past.length });
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot]);
+  }, [solved, restoring, onSolved, slot, session.past.length]);
 
   /**
    * Make a move and record it.

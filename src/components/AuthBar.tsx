@@ -29,10 +29,11 @@ type Providers = { google: boolean; github: boolean };
  * and a player can change it themselves, which is exactly the trust level a
  * name needs.
  *
- * The limit worth knowing: user_metadata is readable only by its owner. It is
- * enough for "show me my own name", and it will not be enough once head-to-head
- * lands and a linked partner has to see it — that wants a row in a table with
- * its own policy. One string is cheap to move when the time comes.
+ * user_metadata is readable only by its owner, though, which is enough for
+ * "show me my own name" and not enough for head-to-head. So the same string is
+ * mirrored into `profiles`, which has a linked-partner read policy. Two writes
+ * rather than one source of truth, deliberately: metadata is what the player
+ * sees and it must not depend on a table write succeeding.
  */
 const nameOf = (user: { email?: string; user_metadata?: Record<string, unknown> } | null) => {
   const raw = user?.user_metadata?.display_name;
@@ -144,13 +145,31 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
       if (!sb) return;
       const wanted = nameDraft.trim().slice(0, 40);
       setBusy(true);
-      const { error } = await sb.auth.updateUser({ data: { display_name: wanted } });
+      const { data, error } = await sb.auth.updateUser({ data: { display_name: wanted } });
       setBusy(false);
       if (error) {
         // never swallow this: the field would just look like it had worked
         setStatus(`That didn't save: ${error.message}`);
         return;
       }
+      // The copy a partner can actually read. Written second and deliberately
+      // not awaited into the success path: user_metadata is the one the player
+      // sees, so if this fails the name still works — it just is not visible to
+      // anyone linked yet, which is a smaller failure than refusing the save.
+      void sb
+        .from("profiles")
+        .upsert(
+          {
+            user_id: data.user?.id,
+            display_name: wanted || null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        )
+        .then(({ error: e }) => {
+          if (e) console.error("[profile] sharing the name failed:", e.message, e);
+        });
+
       setName(wanted || null);
       setStatus(wanted ? `You'll show up as ${wanted}.` : "Name cleared.");
     },

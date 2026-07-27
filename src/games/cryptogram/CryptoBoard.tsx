@@ -23,7 +23,7 @@ import {
   type Puzzle,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
 
@@ -85,6 +85,8 @@ export default function CryptoBoard({
       solvedOnce.current = true;
       setCelebrate(true);
       onSolved?.(slot);
+      /* the record's copy: facts about the attempt, never the answer */
+      void recordResult(slot, GAME_ID, {});
     }
     if (!solved) solvedOnce.current = false;
   }, [solved, restoring, onSolved, slot]);
