@@ -282,7 +282,13 @@ export default function SolveBoard({
 
       <div className="sx-pad">
         {(puzzle.tier ? KEYS_DECIMAL : KEYS).map((k) => (
-          <button key={k} className="key" onClick={() => press(k)}>
+          <button
+            key={k}
+            /* thirteen keys in three columns leaves the backspace alone on a
+               row looking like a mistake; it spans instead */
+            className={"key" + (k === "⌫" && puzzle.tier ? " sx-wide" : "")}
+            onClick={() => press(k)}
+          >
             {k}
           </button>
         ))}
@@ -328,7 +334,12 @@ export default function SolveBoard({
       )}
 
       <footer>
-        <span>Solve for x · ten equations · whole numbers only</span>
+        {/* "whole numbers only" was true of the only tier that existed when it
+            was written, and false the moment the harder two shipped. */}
+        <span>
+          Solve for x · ten equations ·{" "}
+          {puzzle.tier ? "round to the nearest hundredth" : "whole numbers only"}
+        </span>
         <span title={saved && "error" in saved ? saved.error : undefined}>
           {!saved
             ? "Answers save automatically"

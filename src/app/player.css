@@ -389,6 +389,7 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   max-width:260px; margin:12px auto 4px;
 }
 .sx-pad .key{height:46px; font-size:19px}
+.sx-pad .sx-wide{grid-column:span 3}
 
 @media (max-width:560px){
   .sx-row{grid-template-columns:22px 1fr 66px; gap:8px; padding:9px 10px}
