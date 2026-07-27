@@ -8,16 +8,29 @@ import { mergeLocalIntoCloud } from "@/lib/progress";
  * Sign-in is entirely optional and says so.
  *
  * Playing needs no account, so this never blocks anything — it offers to keep
- * progress across devices and otherwise stays out of the way. A magic link
- * rather than a password: fewer things for a player to lose, and nothing for us
- * to store or leak.
+ * progress across devices and otherwise stays out of the way.
+ *
+ * Two routes in, and which appear depends on what the project actually has
+ * enabled, read at runtime rather than hardcoded:
+ *
+ *   OAuth       no email involved, so there is no rate limit to hit. Listed
+ *               first for that reason.
+ *   Magic link  Supabase's built-in mailer allows only a handful of messages an
+ *               hour and is meant for testing. Tolerable in practice — signing
+ *               in is a once-per-device event and sessions persist — but it
+ *               will bite during setup, so that failure is named plainly rather
+ *               than shown as a raw error.
  */
+
+type Providers = { google: boolean; github: boolean };
+
 export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
   const [email, setEmail] = useState("");
   const [who, setWho] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [providers, setProviders] = useState<Providers>({ google: false, github: false });
 
   const sb = getSupabase();
 
@@ -29,13 +42,25 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
       if (alive) setWho(data.user?.email ?? null);
     });
 
+    // ask the project what it supports, so a provider switched on in the
+    // dashboard shows up here without a code change
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setProviders({ google: !!d?.external?.google, github: !!d?.external?.github });
+      })
+      .catch(() => {});
+
     const { data: sub } = sb.auth.onAuthStateChange(async (event, session) => {
       if (!alive) return;
       setWho(session?.user?.email ?? null);
       if (event === "SIGNED_IN") {
-        // carry up anything solved before signing in
         const moved = await mergeLocalIntoCloud(gameId);
-        setStatus(moved ? `Signed in. ${moved} saved puzzle${moved === 1 ? "" : "s"} synced.` : "Signed in.");
+        setStatus(
+          moved ? `Signed in. ${moved} saved puzzle${moved === 1 ? "" : "s"} synced.` : "Signed in."
+        );
         setOpen(false);
       }
     });
@@ -44,6 +69,17 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
       sub.subscription.unsubscribe();
     };
   }, [sb, gameId]);
+
+  const oauth = useCallback(
+    async (provider: "google" | "github") => {
+      if (!sb) return;
+      await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    },
+    [sb]
+  );
 
   const sendLink = useCallback(
     async (e: React.FormEvent) => {
@@ -56,11 +92,17 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
       setBusy(false);
-      setStatus(
-        error
-          ? `That didn't send: ${error.message}`
-          : "Check your email for a link. It signs you in — no password."
-      );
+
+      if (!error) {
+        setStatus("Check your email for a link. It signs you in — no password.");
+      } else if (/rate limit/i.test(error.message)) {
+        setStatus(
+          "Too many sign-in emails for now — the built-in mailer only allows a few an hour. " +
+            "Wait a while and try once, or use another option above."
+        );
+      } else {
+        setStatus(`That didn't send: ${error.message}`);
+      }
     },
     [sb, email]
   );
@@ -71,7 +113,6 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
     setStatus("Signed out. Progress stays on this device.");
   }, [sb]);
 
-  // No backend configured: say nothing rather than offer a button that cannot work.
   if (!supabaseConfigured) return null;
 
   return (
@@ -93,6 +134,22 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
             You do not need an account to play. Sign in and your half-finished puzzles follow
             you to any other device — including the ones you have already started here.
           </p>
+
+          {(providers.google || providers.github) && (
+            <div className="row" style={{ marginBottom: 12 }}>
+              {providers.google && (
+                <button className="tool" onClick={() => oauth("google")}>
+                  Continue with Google
+                </button>
+              )}
+              {providers.github && (
+                <button className="tool" onClick={() => oauth("github")}>
+                  Continue with GitHub
+                </button>
+              )}
+            </div>
+          )}
+
           <form className="row" onSubmit={sendLink}>
             <input
               type="email"
