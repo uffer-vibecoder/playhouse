@@ -2,3 +2,8 @@ node_modules
 .next
 .env.local
 .DS_Store
+
+# celebration art: real likenesses stay out of a public repo.
+# Drop the file in locally and it works; without it the theme falls back.
+public/stage-screen.png
+tsconfig.tsbuildinfo

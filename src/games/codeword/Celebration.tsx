@@ -46,6 +46,20 @@ type Sprite = {
 
 type Burst = { style: Style; art?: string; overGrid: Sprite[]; loose: Sprite[] };
 
+/**
+ * Custom art is not in the repository — it is a real person's likeness, which
+ * has no business in a public one. The file is optional at runtime: without it
+ * the theme falls back to blossoms rather than flying broken images.
+ */
+async function artExists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 function buildBurst(theme?: string): Burst {
@@ -116,7 +130,7 @@ function Petal({ size, fill }: { size: number; fill: string }) {
  * by an unrelated re-render.
  */
 export default function Celebration({ theme, onDone }: { theme?: string; onDone: () => void }) {
-  const [burst] = useState<Burst | null>(() => {
+  const [burst, setBurst] = useState<Burst | null>(() => {
     const reduced =
       typeof window !== "undefined" &&
       (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
@@ -127,6 +141,18 @@ export default function Celebration({ theme, onDone }: { theme?: string; onDone:
     const t = setTimeout(onDone, 4600); // tidy up so the grid stays legible
     return () => clearTimeout(t);
   }, [onDone]);
+
+  // if the optional art is absent, quietly become a blossom celebration
+  useEffect(() => {
+    if (!burst?.art) return;
+    let alive = true;
+    void artExists(burst.art).then((ok) => {
+      if (alive && !ok) setBurst((b) => (b ? { ...b, style: "blossom", art: undefined } : b));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [burst?.art]);
 
   if (!burst) return null;
   const { style, art, overGrid, loose } = burst;
