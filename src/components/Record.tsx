@@ -181,8 +181,7 @@ export default function Record() {
       </section>
 
       <section className="lookblock">
-        <h2 className="entryname">How it looks</h2>
-        <ThemeSwitcher />
+        <ThemeSwitcher alwaysOpen />
       </section>
     </main>
   );

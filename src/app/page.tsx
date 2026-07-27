@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuthBar from "@/components/AuthBar";
+import Mark from "@/components/Mark";
 import { SITE } from "@/lib/site";
 import codeword from "@/data/codeword.json";
 import wordgame from "@/data/wordgame.json";
@@ -77,8 +78,11 @@ export default function Home() {
     <main className="shell">
       <div className="topbar">
         <Link href="/" className="wordmark">
-          {first}
-          <span>{second}</span>
+          <Mark size={22} />
+          <span className="wordtext">
+            {first}
+            <span>{second}</span>
+          </span>
         </Link>
         <Link href="/record" className="crumb">
           The record

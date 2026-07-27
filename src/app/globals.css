@@ -79,7 +79,14 @@
   color: var(--shell-ink);
   text-decoration: none;
 }
-.wordmark span { color: var(--fill-text); }
+/* the mark sits to the left of the name at a gap of one pane, per brand */
+.wordmark { display: inline-flex; align-items: center; gap: 9px; }
+.wordtext { display: inline; }
+.wordmark .wordtext span { color: var(--fill-text); }
+
+/* The panel is the content of its own section rather than a control to find,
+   so it fills the width instead of hanging off a flex row in the top bar. */
+.lookblock .dialog { flex-basis: auto; margin-top: 0; }
 
 .linkish {
   background: none;

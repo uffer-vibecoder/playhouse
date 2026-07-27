@@ -17,23 +17,27 @@ import { useTheme } from "@/lib/use-theme";
  * land near 1.3:1 on them — the single easiest way to break the page, per the
  * handoff.
  */
-export default function ThemeSwitcher() {
+export default function ThemeSwitcher({ alwaysOpen = false }: { alwaysOpen?: boolean }) {
   const { choice, setChoice, resolved } = useTheme();
   const [open, setOpen] = useState(false);
+  // On its own page the panel is the content, not something to go looking for.
+  const showing = alwaysOpen || open;
   const current = themeByName(choice.theme);
 
   return (
     <>
-      <button
-        className="linkish"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        title={`${current.name}, ${resolved}`}
-      >
-        Theme
-      </button>
+      {!alwaysOpen && (
+        <button
+          className="linkish"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          title={`${current.name}, ${resolved}`}
+        >
+          Theme
+        </button>
+      )}
 
-      {open && (
+      {showing && (
         <div className="dialog themepanel">
           <h3>How it looks</h3>
           <p>
