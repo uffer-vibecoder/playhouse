@@ -72,6 +72,6 @@ each other's letters onto different grids.
 
 ## Where the puzzles come from
 
-`~/Documents/codeword` — a separate Node pipeline that compiles grids, proves
+`~/Claude/codeword` — a separate Node pipeline that compiles grids, proves
 each has exactly one solution, and exports JSON. It never ships here; this app
 only consumes its output.
