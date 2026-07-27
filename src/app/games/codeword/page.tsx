@@ -1,6 +1,7 @@
 import CodewordGame from "@/games/codeword/CodewordGame";
 import type { Puzzle } from "@/games/codeword/engine";
 import puzzles from "@/data/codeword.json";
+import { pageTitle } from "@/lib/site";
 
 /**
  * Puzzles are static content, so they are imported as a module rather than read
@@ -12,7 +13,7 @@ import puzzles from "@/data/codeword.json";
  * board needs, and shipping `words` would hand the solution to anyone who opens
  * devtools.
  */
-export const metadata = { title: "Codeword — Playhouse" };
+export const metadata = { title: pageTitle("Codeword") };
 
 export default function CodewordPage() {
   return <CodewordGame puzzles={puzzles as Puzzle[]} />;

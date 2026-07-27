@@ -29,7 +29,47 @@ export type SaveOutcome =
   | { where: "cloud" }
   | { where: "local"; error: string };
 
-const LOCAL_PREFIX = "playhouse:progress:";
+/**
+ * Deliberately not the site's name. Saves outlive branding, and a key like
+ * `playhouse:progress:` means renaming the site silently abandons every
+ * half-finished puzzle already sitting in someone's browser. `LEGACY_PREFIX`
+ * is the one we did ship under; `migrateLegacyKeys` carries those forward once.
+ */
+const LOCAL_PREFIX = "pz:progress:";
+const LEGACY_PREFIX = "playhouse:progress:";
+
+/**
+ * Move any saves written under the old key across, once, on first load.
+ *
+ * Copy-then-remove rather than a rename: if the write throws on a full or
+ * locked store, the original is still there to try again next time.
+ */
+function migrateLegacyKeys() {
+  try {
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(LEGACY_PREFIX)) stale.push(k);
+    }
+    for (const k of stale) {
+      const slot = k.slice(LEGACY_PREFIX.length);
+      const raw = localStorage.getItem(k);
+      if (raw && localStorage.getItem(LOCAL_PREFIX + slot) === null) {
+        localStorage.setItem(LOCAL_PREFIX + slot, raw);
+      }
+      localStorage.removeItem(k);
+    }
+  } catch {
+    /* private mode, or a full store — solving still works, it just will not persist */
+  }
+}
+
+let migrated = false;
+function ensureMigrated() {
+  if (migrated || typeof localStorage === "undefined") return;
+  migrated = true;
+  migrateLegacyKeys();
+}
 
 export function fingerprint(grid: number[][], key: string): string {
   let h = 2166136261;
@@ -48,6 +88,7 @@ export const slotKey = (gameId: string, puzzleId: string, fp: string) =>
 
 function readLocal(slot: string): SaveRecord | null {
   try {
+    ensureMigrated();
     const raw = localStorage.getItem(LOCAL_PREFIX + slot);
     return raw ? (JSON.parse(raw) as SaveRecord) : null;
   } catch {
@@ -66,6 +107,7 @@ function writeLocal(slot: string, rec: SaveRecord) {
 function allLocal(): { slot: string; rec: SaveRecord }[] {
   const out: { slot: string; rec: SaveRecord }[] = [];
   try {
+    ensureMigrated();
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k?.startsWith(LOCAL_PREFIX)) continue;
@@ -108,7 +150,7 @@ export async function loadProgress(slot: string): Promise<SaveRecord | null> {
     .eq("slot", slot)
     .maybeSingle();
 
-  if (error) console.error("[playhouse] cloud load failed:", error.message, error);
+  if (error) console.error("[saves] cloud load failed:", error.message, error);
   if (error || !data) return local;
   const cloud: SaveRecord = {
     entries: (data.entries ?? {}) as Entries,
@@ -148,7 +190,7 @@ export async function saveProgress(
   // Swallowing this is how "it doesn't seem to be saving" happens: the letters
   // are safe locally, so nothing looks broken until you open another device.
   if (error) {
-    console.error("[playhouse] cloud save failed:", error.message, error);
+    console.error("[saves] cloud save failed:", error.message, error);
     return { where: "local", error: error.message };
   }
   return { where: "cloud" };
@@ -193,7 +235,7 @@ export async function mergeLocalIntoCloud(gameId: string): Promise<number> {
   if (!rows.length) return 0;
   const { error } = await sb.from("game_progress").upsert(rows, { onConflict: "user_id,slot" });
   if (error) {
-    console.error("[playhouse] syncing local progress failed:", error.message, error);
+    console.error("[saves] syncing local progress failed:", error.message, error);
     return 0;
   }
   return rows.length;
