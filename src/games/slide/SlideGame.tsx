@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import SlideBoard from "./SlideBoard";
 import type { Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
 import { SITE } from "@/lib/site";
 
@@ -42,6 +43,7 @@ export default function SlideGame({ puzzles }: { puzzles: Puzzle[] }) {
         <Link href="/" className="crumb">
           ← {SITE.name}
         </Link>
+        <ThemeSwitcher />
         <AuthBar gameId={GAME_ID} />
       </div>
 

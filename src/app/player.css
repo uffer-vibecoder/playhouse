@@ -67,6 +67,33 @@ body{
   padding:var(--sheet-pad); border-radius:var(--sheet-radius); box-shadow:var(--sheet-shadow);
   color:var(--ink);
 }
+/* ── letting the theme show through ─────────────────────────────────────────
+   In light mode the sheet is slightly translucent, so the ruled lines, dots or
+   hatching behind it read faintly through the margins. The grid keeps its own
+   opaque white, so no letter or number ever sits on anything but paper.
+
+   LIGHT ONLY, and that is arithmetic rather than taste. The sheet's palette is
+   measured against white: --muted is 4.67:1 there. Over a dark ground the
+   composite stops being white — 86% white over Garden Shed's #121A14 lands
+   around #DEDEDE, where --muted falls to about 3.4:1. Staying legal would need
+   ~97% opacity, which is no transparency at all. Dark mode already lifts the
+   sheet off the ground with a shadow, which does the same job by other means.
+
+   THE ALPHA IS MEASURED, NOT CHOSEN. 0.86 was the first guess and it fails:
+   the thing behind the sheet is not the flat ground but the background
+   *pattern*, which is darker. Starry Night's dots and Full Moon's stipple put
+   --muted at 4.43:1 there — under the floor. The smallest alpha that clears
+   4.5 across all seven patterns is 0.925; 0.93 is that with a little headroom,
+   and measures 4.55:1 at worst.
+
+   So the effect is subtle by necessity. Anything more visible costs legibility
+   on the sheet, and the sheet's whole palette is calibrated to white.
+── */
+:root[data-mode="light"] .sheet{ background:rgba(255,255,255,.93) }
+/* Before the script runs there is no data-mode, so only trust the OS. */
+@media (prefers-color-scheme:light){
+  :root:not([data-mode]) .sheet{ background:rgba(255,255,255,.93) }
+}
 
 /* header */
 header{

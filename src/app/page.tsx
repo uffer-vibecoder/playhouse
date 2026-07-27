@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuthBar from "@/components/AuthBar";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { SITE } from "@/lib/site";
 import codeword from "@/data/codeword.json";
 import wordgame from "@/data/wordgame.json";
@@ -80,6 +81,7 @@ export default function Home() {
           {first}
           <span>{second}</span>
         </Link>
+        <ThemeSwitcher />
         <AuthBar />
       </div>
 

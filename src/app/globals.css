@@ -201,6 +201,52 @@
 }
 .crumb:hover { color: var(--shell-ink); }
 
+/* ── theme panel (design 4g) ────────────────────────────────────────────────
+   Every swatch and pill puts the FIXED ink on the fill, never --shell-ink.
+   Fills are light pastels in both modes, so an inverted shell ink lands near
+   1.3 : 1 on them — the handoff names this as the easiest way to break a page.
+── */
+.themepanel h3 { color: var(--ink); }
+.themegrid { display: flex; flex-wrap: wrap; gap: 6px; }
+.themepill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px 6px 8px; border-radius: 999px;
+  border: 1.5px solid var(--underline); background: #FFFFFF;
+  font-family: var(--ui); font-size: 12px; font-weight: 700;
+  color: #111111; cursor: pointer;
+}
+.themepill.on { border-color: #111111; border-width: 2px; }
+.themepill:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.themedot {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1.5px solid #111111; flex: none; background: var(--fill);
+}
+/* the theme with colourways shows the one in use rather than a fixed swatch */
+.themedot[data-way] { background: var(--fill); }
+
+.ways { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.wayslabel {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--muted);
+}
+.waydot {
+  width: 22px; height: 22px; border-radius: 50%; padding: 0;
+  border: 1.5px solid var(--underline); cursor: pointer;
+}
+.waydot.on { border-color: #111111; border-width: 2.5px; }
+.waydot:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+
+.modes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.modebtn {
+  padding: 5px 12px; border-radius: 999px;
+  border: 1.5px solid var(--underline); background: #FFFFFF;
+  font-family: var(--ui); font-size: 10px; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  color: #111111; cursor: pointer;
+}
+.modebtn.on { background: var(--fill); border-color: #111111; }
+.modebtn:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+
 /* Site footer.
    player.css styles the bare `footer` element for the puzzle page — uppercase,
    flex, letter-spaced, in --muted-3. That is the design handoff's rule and it
