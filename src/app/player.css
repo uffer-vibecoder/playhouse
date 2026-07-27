@@ -8,7 +8,13 @@
   --ink:#111111; --body:#514B45;
   --muted:#7A736C; --muted-2:#8C857D; --muted-3:#9A938B;
   --rule:#E4DFD8; --underline:#C9C2BA; --tile:#F4F1EC;
-  --accent:#F5A9C6; --accent-tint:#FDEFF4; --accent-deep:#C4467E;
+  --accent:#F5A9C6; --accent-tint:#FDEFF4;
+  /* Strokes only — outlines, rings, rules. Never text: it measures 4.1:1 on
+     the sheet, under the 4.5 minimum. The design handoff calls this out by
+     name, and we had it on four pieces of live text before it did. */
+  --accent-deep:#C4467E;
+  /* The pink that is legal as small text on the sheet: 5.9:1. */
+  --accent-text:#A3306A;
   --display:'Fredoka', system-ui, sans-serif;
   --ui:'Space Grotesk', system-ui, sans-serif;
 
@@ -182,8 +188,8 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 .cell.word::before{content:""; position:absolute; top:0; right:0; bottom:0; left:0; background:var(--accent-tint); z-index:1}
 .cell.same::after{content:""; position:absolute; top:0; right:0; bottom:0; left:0; background:var(--accent); opacity:.30; z-index:2}
 .cell.sel{outline:2.5px solid var(--accent-deep); outline-offset:-2.5px; z-index:4}
-.cell.given .ltr{font-weight:600; color:var(--accent-deep)}
-.cell.wrong .ltr{color:var(--accent-deep); text-decoration:line-through}
+.cell.given .ltr{font-weight:600; color:var(--accent-text)}
+.cell.wrong .ltr{color:var(--accent-text); text-decoration:line-through}
 @keyframes ping{0%{transform:scale(1)}45%{transform:scale(.86)}100%{transform:scale(1)}}
 .cell.ping .ltr{animation:ping .32s ease}
 
@@ -393,8 +399,8 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   font-family:var(--display); font-weight:600; font-size:19px; line-height:1.1;
   color:var(--ink); min-height:21px;
 }
-.cg-cell.given .cg-ltr{color:var(--accent-deep)}
-.cg-cell.wrong .cg-ltr{color:var(--accent-deep); text-decoration:line-through}
+.cg-cell.given .cg-ltr{color:var(--accent-text)}
+.cg-cell.wrong .cg-ltr{color:var(--accent-text); text-decoration:line-through}
 .cg-num{
   font-family:var(--ui); font-size:9px; font-weight:700; letter-spacing:.4px;
   color:var(--muted-2); font-variant-numeric:tabular-nums;
