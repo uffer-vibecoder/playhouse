@@ -12,6 +12,7 @@ import {
   isWellFormed,
   neighbours,
   slide,
+  hint,
   slideByDirection,
   solvedTiles,
   type Puzzle,
@@ -162,6 +163,56 @@ test("isWellFormed rejects the obvious ways a save can be wrong", () => {
   assert.ok(!isWellFormed(Array(CELLS).fill(0)));
   assert.ok(!isWellFormed([...solvedTiles(), 3]));
   assert.ok(!isWellFormed(null));
+});
+
+/* ── hints ───────────────────────────────────────────────────────────────── */
+
+test("a hint on the solved board is nothing to give", () => {
+  assert.equal(hint(solvedTiles()).kind, "none");
+});
+
+test("the hinted move is always legal", () => {
+  for (let seed = 1; seed <= 25; seed++) {
+    const t = board(puz(seed), 30);
+    const h = hint(t);
+    if (h.kind !== "move") continue;
+    assert.ok(
+      neighbours(t.indexOf(0)).includes(h.index),
+      `seed ${seed}: hinted a tile that cannot move`
+    );
+  }
+});
+
+test("following the hint always shortens the remaining solution", () => {
+  // The heuristic is admissible, so the reported length is the true optimum —
+  // taking the move must drop it by exactly one, every time.
+  for (let seed = 1; seed <= 12; seed++) {
+    let s = st(board(puz(seed), 20));
+    let before = hint(s.tiles);
+    if (before.kind !== "move") continue;
+    for (let step = 0; step < 6 && before.kind === "move"; step++) {
+      s = slide(s, before.index);
+      const after = hint(s.tiles);
+      if (after.kind !== "move") break;
+      assert.equal(
+        after.remaining,
+        before.remaining - 1,
+        `seed ${seed}: following the hint did not shorten the line`
+      );
+      before = after;
+    }
+  }
+});
+
+test("a hint can be followed all the way to a solve", () => {
+  let s = st(board(puz(9), 25));
+  for (let i = 0; i < 120 && !isSolvedPuzzle(s); i++) {
+    const h = hint(s.tiles);
+    assert.equal(h.kind, "move", "the line ran out before the puzzle was solved");
+    if (h.kind !== "move") break;
+    s = slide(s, h.index);
+  }
+  assert.ok(isSolvedPuzzle(s), "following hints did not finish the puzzle");
 });
 
 test("the archive's seeds are all distinct", async () => {

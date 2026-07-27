@@ -368,6 +368,19 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 /* already where it belongs — quiet confirmation, not a score */
 .sl-tile.home{background:var(--accent-tint); border-color:var(--accent)}
 .sl-tile.moved{border-color:var(--ink)}
+/* A hint points; it does not move. The pulse says "this one" without taking
+   the turn away from the player. */
+.sl-tile.hinted{
+  border-color:var(--accent-deep); border-width:3px;
+  animation:hintPulse 1.1s ease-in-out infinite;
+}
+@keyframes hintPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(196,70,126,.36)}
+  50%{box-shadow:0 0 0 7px rgba(196,70,126,0)}
+}
+@media (prefers-reduced-motion:reduce){
+  .sl-tile.hinted{animation:none; box-shadow:0 0 0 3px rgba(196,70,126,.30)}
+}
 
 @media (prefers-reduced-motion: reduce){
   .sl-tile{transition:none}
