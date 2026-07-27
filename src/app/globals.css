@@ -5,7 +5,44 @@
    The chrome around a game: site header, game library, the sign-in
    affordance. Built from the same design tokens the puzzle uses, so moving
    between the library and a game does not feel like changing product.
+
+   These tokens exist because the puzzle's palette cannot serve here. A puzzle
+   is printed paper and keeps a fixed dark-on-white palette in both themes; the
+   shell sits directly on the page ground, which inverts. Using --ink out here
+   put black text on a near-black ground: a contrast ratio of 1.05, which is to
+   say invisible. Anything on a white card still uses the fixed palette.
+
+   Values chosen against measured contrast, not by eye:
+     shell-ink    15.9 : 1 dark   ·  18.9 : 1 light   AAA
+     shell-body   10.2 : 1 dark   ·   8.6 : 1 light   AAA
+     shell-muted   6.7 : 1 dark   ·   5.9 : 1 light   AA
 ── */
+:root {
+  --shell-ink: #111111;
+  --shell-body: #514B45;
+  --shell-muted: #6B635C;
+  --shell-rule: #111111;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shell-ink: #F5EFF1;
+    --shell-body: #CBC0C4;
+    --shell-muted: #A79BA0;
+    --shell-rule: #6E5F64;
+  }
+}
+:root[data-theme="dark"] {
+  --shell-ink: #F5EFF1;
+  --shell-body: #CBC0C4;
+  --shell-muted: #A79BA0;
+  --shell-rule: #6E5F64;
+}
+:root[data-theme="light"] {
+  --shell-ink: #111111;
+  --shell-body: #514B45;
+  --shell-muted: #6B635C;
+  --shell-rule: #111111;
+}
 
 .shell {
   max-width: 640px;
@@ -25,10 +62,10 @@
   font-weight: 600;
   font-size: 20px;
   letter-spacing: -0.2px;
-  color: var(--ink);
+  color: var(--shell-ink);
   text-decoration: none;
 }
-.wordmark span { color: var(--accent-deep); }
+.wordmark span { color: var(--accent); }
 
 .linkish {
   background: none;
@@ -39,14 +76,14 @@
   font-weight: 700;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--shell-muted);
   cursor: pointer;
 }
-.linkish:hover { color: var(--ink); }
+.linkish:hover { color: var(--shell-ink); }
 .linkish:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; }
 
 /* home */
-.hero { padding: 8px 0 22px; border-bottom: 3px solid var(--ink); }
+.hero { padding: 8px 0 22px; border-bottom: 3px solid var(--shell-rule); }
 .hero h1 {
   font-family: var(--display);
   font-weight: 600;
@@ -55,11 +92,12 @@
   letter-spacing: -0.5px;
   margin: 0;
   text-wrap: balance;
+  color: var(--shell-ink);
 }
 .hero p {
   font-size: 13px;
   line-height: 1.55;
-  color: var(--body);
+  color: var(--shell-body);
   max-width: 46ch;
   margin: 12px 0 0;
 }
@@ -84,12 +122,14 @@
   margin: 0;
 }
 .gamecard p { font-size: 12px; line-height: 1.5; color: var(--body); margin: 0; max-width: 44ch; }
+/* cards are always white, so these keep the fixed palette — but --muted-3
+   measured 3.03 : 1 here, which fails even in light mode at 10px */
 .gamecard .meta {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--muted-3);
+  color: #6B635C;
 }
 .gamecard.soon { border-style: dashed; border-color: var(--underline); cursor: default; }
 .gamecard.soon h2 { color: var(--muted); }
@@ -140,10 +180,10 @@
   font-weight: 700;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--shell-muted);
   text-decoration: none;
 }
-.crumb:hover { color: var(--ink); }
+.crumb:hover { color: var(--shell-ink); }
 
 @media (max-width: 560px) {
   .hero h1 { font-size: 32px; }
