@@ -31,9 +31,11 @@ const GAME_ID = "cryptogram";
 export default function CryptoBoard({
   puzzle,
   onSolved,
+  onNext,
 }: {
   puzzle: Puzzle;
   onSolved?: (slot: string) => void;
+  onNext?: () => void;
 }) {
   useEffect(watchBrowserPrint, []);
 
@@ -130,6 +132,15 @@ export default function CryptoBoard({
         </div>
       </header>
 
+      {puzzle.topic && (
+        <div className="introrow">
+          <div className="theme-tag">
+            <span className="label">Hint</span>
+            <span className="value">{puzzle.topic}</span>
+          </div>
+        </div>
+      )}
+
       <details className="disclosure noprint">
         <summary>
           <span className="chev" />
@@ -213,6 +224,9 @@ export default function CryptoBoard({
         </button>
         <button className="tool" onClick={printPanelsOpen}>
           Print
+        </button>
+        <button className="tool" onClick={onNext}>
+          Next puzzle
         </button>
       </div>
 

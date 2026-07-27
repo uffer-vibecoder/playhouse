@@ -25,6 +25,8 @@ export type Puzzle = {
   key: string;
   /** Codes revealed from the start. */
   given: number[];
+  /** A nudge at what the sentence is about — never a word from it. */
+  topic?: string;
   added?: string;
 };
 

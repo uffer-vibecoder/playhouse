@@ -30,21 +30,21 @@ const GAMES: Game[] = [
   {
     href: "/games/wordgame",
     meta: "120 puzzles",
-    title: "Word guessing",
+    title: "Word Guessing",
     blurb:
       "Six guesses to find a hidden five-letter word — an archive to work through rather than one a day.",
   },
   {
     href: "/games/solveforx",
     meta: "120 sets",
-    title: "Solve for x",
+    title: "Solve for X",
     blurb:
       "Ten equations a set, easing from one step to two. Every answer is a whole number.",
   },
   {
     href: "/games/slide",
     meta: "120 boards",
-    title: "Sliding tiles",
+    title: "Sliding Tiles",
     blurb:
       "Fifteen numbers and a gap. Push them back into order — every board here can be solved.",
   },

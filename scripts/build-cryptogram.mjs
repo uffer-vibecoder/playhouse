@@ -31,8 +31,8 @@ const CODEWORD = resolve(
 // below is what actually decides whether a text is usable; a first pass set
 // these high enough to reject every proverb ever written, which is the wrong
 // way round — a 45-letter line can be perfectly solvable, and the solver knows.
-const MIN_LETTERS = 38; // total letters, not characters
-const MIN_DISTINCT = 11; // distinct letters used
+const MIN_LETTERS = 20; // total letters, not characters
+const MIN_DISTINCT = 9; // distinct letters used
 const MAX_GIVENS = 6; // past this a puzzle is being given away
 const NODE_CAP = 400_000; // search budget per text, so a pathological one fails loudly
 
@@ -53,6 +53,24 @@ const readList = (path) =>
  */
 const SHORT = `A I AM AN AS AT BE BY DO GO HE IF IN IS IT ME MY NO OF ON OR SO TO UP US WE`.split(" ");
 
+/**
+ * Words the generated lists will never contain, but which real sentences do.
+ *
+ * Two kinds. Contractions, because an apostrophe is punctuation here and
+ * carries no code, so YOU'RE reaches the solver as the letters YOURE. And
+ * proper nouns, which the vocabulary excludes on purpose.
+ *
+ * Anything added here still has to survive the uniqueness proof — a name is
+ * not a free pass, it just gives the solver a candidate it would otherwise
+ * lack. Add to this list when a new text needs it; the script says which word
+ * it could not find.
+ */
+const ALLOWED_EXTRA = `
+YOURE DONT CANT WONT ISNT ARENT WASNT DIDNT DOESNT COULDNT WOULDNT SHOULDNT
+ITS THATS THERES WHATS LETS IVE ILL IM YOUVE THEYRE WERE
+LISA
+`.trim().split(/\s+/);
+
 const DATA = join(CODEWORD, "data");
 if (!existsSync(DATA)) {
   console.error(`No codeword data at ${DATA}. Pass --codeword <path>.`);
@@ -62,6 +80,7 @@ const VOCAB = new Set([
   ...readList(join(DATA, "words.txt")),
   ...readList(join(DATA, "extra-words.txt")),
   ...SHORT,
+  ...ALLOWED_EXTRA,
 ]);
 
 /** Words grouped by length, for the solver to draw candidates from. */
@@ -203,24 +222,41 @@ function findReadings(cipherWords, seeded, limit = 2) {
 
 /* ── build ──────────────────────────────────────────────────────────────── */
 
-const texts = readFileSync(join(process.cwd(), "data/cryptogram-texts.txt"), "utf8")
-  .split("\n")
-  .map((l) => l.trim())
-  .filter((l) => l && !l.startsWith("#"));
+/**
+ * Read the texts, carrying the section heading down as each line's topic.
+ *
+ * `## Proverbs and sayings` marks everything under it, and that heading becomes
+ * the hint shown beside the puzzle — enough of a nudge to make a stubborn one
+ * tractable without giving anything away.
+ */
+const texts = [];
+{
+  let topic = "";
+  for (const raw of readFileSync(join(process.cwd(), "data/cryptogram-texts.txt"), "utf8").split("\n")) {
+    const line = raw.trim();
+    if (line.startsWith("##")) {
+      topic = line.replace(/^#+\s*/, "").replace(/\s*─+\s*$/, "").trim();
+      continue;
+    }
+    if (!line || line.startsWith("#")) continue;
+    texts.push({ text: line, topic });
+  }
+}
 
 const seedFor = (n) => Math.imul(n + 1 + 4211, 2654435761) >>> 0;
 
 const out = [];
 const rejected = [];
 
-texts.forEach((text, i) => {
+texts.forEach(({ text, topic }, i) => {
   const upper = text.toUpperCase();
 
-  if (!/^[A-Z ,]+\.$/.test(upper)) {
-    rejected.push([text, "letters, spaces and commas only, ending in a full stop"]);
+  if (!/^[A-Z ,'!?]+[.!?]$/.test(upper)) {
+    rejected.push([text, "letters, spaces, commas and apostrophes only, ending in . ! or ?"]);
     return;
   }
-  const words = upper.replace(/[.,]/g, "").split(/\s+/).filter(Boolean);
+  // The apostrophe carries no code, so YOU'RE reaches the solver as YOURE.
+  const words = upper.replace(/[.,'!?]/g, "").split(/\s+/).filter(Boolean);
   const missing = words.filter((w) => !VOCAB.has(w));
   if (missing.length) {
     rejected.push([text, `not in the vocabulary: ${[...new Set(missing)].join(", ")}`]);
@@ -323,6 +359,7 @@ texts.forEach((text, i) => {
     text: Buffer.from(upper, "utf8").toString("base64"),
     key,
     given: given.map(codeOf).sort((a, b) => a - b),
+    topic,
     added: new Date().toISOString().slice(0, 10),
   });
 });

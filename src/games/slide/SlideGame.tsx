@@ -26,6 +26,12 @@ export default function SlideGame({ puzzles }: { puzzles: Puzzle[] }) {
     setSolved((prev) => (prev.has(slot) ? prev : new Set(prev).add(slot)));
   }, []);
 
+  /** Wraps at the end, so the last puzzle still has somewhere to go. */
+  const goNext = useCallback(
+    () => setIndex((i) => (i + 1) % puzzles.length),
+    [puzzles.length]
+  );
+
   const slotOf = (p: Puzzle) =>
     slotKey(GAME_ID, p.id, fingerprint([[p.seed]], String(p.seed)));
   const doneCount = puzzles.filter((p) => solved.has(slotOf(p))).length;
@@ -77,7 +83,7 @@ export default function SlideGame({ puzzles }: { puzzles: Puzzle[] }) {
       </div>
 
       {/* index drives how far the board starts from solved — see scrambleDepth */}
-      <SlideBoard puzzle={puzzle} index={index} onSolved={markSolved} />
+      <SlideBoard puzzle={puzzle} index={index} onSolved={markSolved} onNext={goNext} />
     </main>
   );
 }

@@ -9,7 +9,7 @@ import { pageTitle } from "@/lib/site";
  * — there is genuinely nothing here to leak, and two people opening the same
  * puzzle id are guaranteed the same ten problems.
  */
-export const metadata = { title: pageTitle("Solve for x") };
+export const metadata = { title: pageTitle("Solve for X") };
 
 export default function SolveForXPage() {
   return <SolveGame puzzles={puzzles as Puzzle[]} />;

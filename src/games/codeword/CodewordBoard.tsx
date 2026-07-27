@@ -32,9 +32,11 @@ const GAME_ID = "codeword";
 export default function CodewordBoard({
   puzzle,
   onSolved,
+  onNext,
 }: {
   puzzle: Puzzle;
   onSolved?: (slot: string) => void;
+  onNext?: () => void;
 }) {
   const slots = useMemo(() => buildSlots(puzzle), [puzzle]);
   // Ctrl-P and the browser's own print command, which never reach our button
@@ -261,6 +263,9 @@ export default function CodewordBoard({
         </button>
         <button className="tool" onClick={printPanelsOpen}>
           Print
+        </button>
+        <button className="tool" onClick={onNext}>
+          Next puzzle
         </button>
       </div>
 

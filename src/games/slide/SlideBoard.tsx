@@ -14,22 +14,56 @@ import {
   type Puzzle,
   type Saved,
   type State,
+  type Tiles,
 } from "./engine";
 import { fingerprint, loadProgress, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import Celebration from "@/components/Celebration";
 
 const GAME_ID = "slide";
 
+/** Far past any real game, and it only exists so history cannot grow forever. */
+const HISTORY_CAP = 300;
+
+type Session = { state: State; past: Tiles[]; future: Tiles[] };
+
 export default function SlideBoard({
   puzzle,
   index,
   onSolved,
+  onNext,
 }: {
   puzzle: Puzzle;
   index: number;
   onSolved?: (slot: string) => void;
+  onNext?: () => void;
 }) {
-  const [state, setState] = useState<State>(() => initialState(puzzle, index));
+  /**
+   * The board plus its move history.
+   *
+   * History is deliberately NOT part of the saved state: every entry is a whole
+   * board, so persisting it would multiply the save by however many moves have
+   * been made, and undo is session state in the same way scratch working is.
+   * It starts empty after a reload, which is what a player expects.
+   *
+   * One `useState` rather than three, so a move can push history and change the
+   * board in a single pure update — nesting setters inside another setter's
+   * updater double-fires under StrictMode.
+   */
+  const [session, setSession] = useState<Session>(() => ({
+    state: initialState(puzzle, index),
+    past: [],
+    future: [],
+  }));
+  const state = session.state;
+  const setState = useCallback(
+    (next: State | ((s: State) => State)) =>
+      setSession((sess) => ({
+        state: typeof next === "function" ? (next as (s: State) => State)(sess.state) : next,
+        past: [],
+        future: [],
+      })),
+    []
+  );
   const [restoredSlot, setRestoredSlot] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
@@ -54,7 +88,7 @@ export default function SlideBoard({
     return () => {
       alive = false;
     };
-  }, [slot, puzzle, index]);
+  }, [slot, puzzle, index, setState]);
 
   /* persist */
   const solved = isSolvedPuzzle(state);
@@ -76,14 +110,66 @@ export default function SlideBoard({
     if (!solved) solvedOnce.current = false;
   }, [solved, restoring, onSolved, slot]);
 
-  const push = useCallback((i: number) => setState((s) => slide(s, i)), []);
+  /**
+   * Make a move and record it.
+   *
+   * `slide` returns the state unchanged when the move is illegal — a tile out
+   * of line with the gap — so reference equality is what decides whether
+   * anything happened. Without that check, tapping a tile that cannot move
+   * would still push a history entry and make undo do nothing visible.
+   */
+  const move = useCallback((fn: (s: State) => State) => {
+    setSession((sess) => {
+      const next = fn(sess.state);
+      if (next === sess.state) return sess;
+      return {
+        state: next,
+        past: [...sess.past, sess.state.tiles].slice(-HISTORY_CAP),
+        future: [],
+      };
+    });
+  }, []);
 
-  /* arrow keys move the gap */
+  const push = useCallback((i: number) => move((s) => slide(s, i)), [move]);
+
+  const undo = useCallback(() => {
+    setSession((sess) => {
+      if (!sess.past.length) return sess;
+      return {
+        state: { tiles: sess.past[sess.past.length - 1], last: null },
+        past: sess.past.slice(0, -1),
+        future: [sess.state.tiles, ...sess.future].slice(0, HISTORY_CAP),
+      };
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setSession((sess) => {
+      if (!sess.future.length) return sess;
+      const [next, ...rest] = sess.future;
+      return {
+        state: { tiles: next, last: null },
+        past: [...sess.past, sess.state.tiles].slice(-HISTORY_CAP),
+        future: rest,
+      };
+    });
+  }, []);
+
+  /* arrow keys move the gap; the usual undo shortcuts work too */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) return;
+
+      // checked before the modifier guard below, since these *are* modifiers
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        if (e.shiftKey) redo();
+        else undo();
+        e.preventDefault();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
       const by: Record<string, [number, number]> = {
         ArrowUp: [1, 0],
         ArrowDown: [-1, 0],
@@ -92,12 +178,12 @@ export default function SlideBoard({
       };
       const d = by[e.key];
       if (!d) return;
-      setState((s) => slideByDirection(s, d[0], d[1]));
+      move((s) => slideByDirection(s, d[0], d[1]));
       e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [move, undo, redo]);
 
   const home = homeCount(state);
 
@@ -115,7 +201,7 @@ export default function SlideBoard({
     <div className="sheet">
       <header>
         <div>
-          <h1>Sliding tiles</h1>
+          <h1>Sliding Tiles</h1>
           <div className="strapline">Fifteen numbers and a gap</div>
         </div>
         <div className="badges">
@@ -169,8 +255,17 @@ export default function SlideBoard({
       </div>
 
       <div className="tools">
+        <button className="tool" onClick={undo} disabled={!session.past.length}>
+          Back
+        </button>
+        <button className="tool" onClick={redo} disabled={!session.future.length}>
+          Redo
+        </button>
         <button className="tool" onClick={() => setState(reset(puzzle, index))}>
           Start over
+        </button>
+        <button className="tool" onClick={onNext}>
+          Next puzzle
         </button>
       </div>
 

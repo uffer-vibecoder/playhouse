@@ -26,6 +26,12 @@ export default function CryptoGame({ puzzles }: { puzzles: Puzzle[] }) {
     setSolved((prev) => (prev.has(slot) ? prev : new Set(prev).add(slot)));
   }, []);
 
+  /** Wraps at the end, so the last puzzle still has somewhere to go. */
+  const goNext = useCallback(
+    () => setIndex((i) => (i + 1) % puzzles.length),
+    [puzzles.length]
+  );
+
   const slotOf = (p: Puzzle) =>
     slotKey(GAME_ID, p.id, fingerprint([[p.key.length]], p.key));
   const doneCount = puzzles.filter((p) => solved.has(slotOf(p))).length;
@@ -76,7 +82,7 @@ export default function CryptoGame({ puzzles }: { puzzles: Puzzle[] }) {
         </details>
       </div>
 
-      <CryptoBoard puzzle={puzzle} onSolved={markSolved} />
+      <CryptoBoard puzzle={puzzle} onSolved={markSolved} onNext={goNext} />
     </main>
   );
 }

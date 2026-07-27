@@ -530,9 +530,14 @@ footer{
 }
 @media (max-width:560px){
   body{padding:20px 12px 40px}
-  /* the badges sit under the title rather than fighting it for width */
-  header{flex-direction:column; align-items:flex-start; gap:10px}
-  h1{font-size:32px}
+  /* The puzzle number stays in the top right on a phone. It used to drop below
+     the title on its own row, which read as a stray label rather than as the
+     number of the thing you are looking at. The title takes the space that is
+     left, so it wraps instead of pushing the number off. */
+  header{flex-direction:row; align-items:flex-start; justify-content:space-between; gap:10px}
+  header > div:first-child{min-width:0}
+  .badges{flex:0 0 auto}
+  h1{font-size:28px}
   .strapline{font-size:10px; letter-spacing:1.8px}
   .pad{grid-template-columns:repeat(7,1fr)}
   .key{height:40px; font-size:19px}          /* thumb-sized */

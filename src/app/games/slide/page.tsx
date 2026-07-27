@@ -8,7 +8,7 @@ import { pageTitle } from "@/lib/site";
  * arrangement using that seed, which is also what guarantees every board can
  * actually be solved — half of all random arrangements cannot be.
  */
-export const metadata = { title: pageTitle("Sliding tiles") };
+export const metadata = { title: pageTitle("Sliding Tiles") };
 
 export default function SlidePage() {
   return <SlideGame puzzles={puzzles as Puzzle[]} />;

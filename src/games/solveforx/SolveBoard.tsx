@@ -35,9 +35,11 @@ const KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "−", "0", "⌫"];
 export default function SolveBoard({
   puzzle,
   onSolved,
+  onNext,
 }: {
   puzzle: Puzzle;
   onSolved?: (slot: string) => void;
+  onNext?: () => void;
 }) {
   useEffect(watchBrowserPrint, []);
 
@@ -152,7 +154,7 @@ export default function SolveBoard({
     <div className="sheet">
       <header>
         <div>
-          <h1>Solve for x</h1>
+          <h1>Solve for X</h1>
           <div className="strapline">Ten to work through</div>
         </div>
         <div className="badges">
@@ -241,6 +243,9 @@ export default function SolveBoard({
         </button>
         <button className="tool" onClick={printPanelsOpen}>
           Print
+        </button>
+        <button className="tool" onClick={onNext}>
+          Next puzzle
         </button>
       </div>
 

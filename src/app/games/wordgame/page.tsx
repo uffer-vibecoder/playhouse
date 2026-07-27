@@ -12,7 +12,7 @@ import { pageTitle } from "@/lib/site";
  * are not readable at a glance in devtools, which is obfuscation and not
  * security — see the note in engine.ts.
  */
-export const metadata = { title: pageTitle("Word guessing") };
+export const metadata = { title: pageTitle("Word Guessing") };
 
 export default function WordGamePage() {
   return <WordGame puzzles={puzzles as Puzzle[]} />;

@@ -16,7 +16,7 @@
 # These are starter texts. Proverbs are nobody's property and plain facts are
 # not copyrightable; Noah and his wife are adding their own lines later.
 
-# ── proverbs and sayings ────────────────────────────────────────────────────
+## Proverbs and sayings
 Do not count your chickens before they are hatched.
 People who live in glass houses should not throw stones.
 A journey of a thousand miles begins with a single step.
@@ -38,7 +38,7 @@ Great minds think alike, though fools seldom differ either.
 Do not put all of your eggs into one basket, however sturdy.
 A watched pot never boils, and a watched clock never moves.
 
-# ── science and nature ──────────────────────────────────────────────────────
+## Science and nature
 An octopus has three hearts, blue blood, and no bones at all.
 Honey never spoils, even after thousands of years in a jar.
 Sharks were swimming in the sea long before trees existed.
@@ -63,3 +63,6 @@ Some trees alive today were seedlings before the pyramids were built.
 The oceans hold almost all of the water on the entire planet.
 Ice is slippery because a thin film of water forms on top of it.
 Glass is not a liquid, whatever your teacher may have told you.
+
+## Famously bad films
+You're tearing me apart, Lisa.

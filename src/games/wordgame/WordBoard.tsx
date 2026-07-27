@@ -46,9 +46,11 @@ const ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
 export default function WordBoard({
   puzzle,
   onSolved,
+  onNext,
 }: {
   puzzle: Puzzle;
   onSolved?: (slot: string) => void;
+  onNext?: () => void;
 }) {
   useEffect(watchBrowserPrint, []);
 
@@ -168,7 +170,7 @@ export default function WordBoard({
     <div className="sheet">
       <header>
         <div>
-          <h1>Word guessing</h1>
+          <h1>Word Guessing</h1>
           <div className="strapline">Six tries · five letters</div>
         </div>
         <div className="badges">
@@ -257,6 +259,9 @@ export default function WordBoard({
         </button>
         <button className="tool" onClick={printPanelsOpen}>
           Print
+        </button>
+        <button className="tool" onClick={onNext}>
+          Next puzzle
         </button>
       </div>
 
