@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Mark from "@/components/Mark";
 import {
   CELLS,
   SIZE,
@@ -234,10 +235,13 @@ export default function SlideBoard({
       <header>
         <div>
           <h1>Sliding Tiles</h1>
-          <div className="strapline">Fifteen numbers and a gap</div>
+          <div className="titlerow">
+            <span className="strapline">Fifteen numbers and a gap</span>
+            <span className="pill-num">{puzzle.id.replace("SL-", "NO. ")}</span>
+          </div>
         </div>
         <div className="badges">
-          <span className="pill-no">{puzzle.id.replace("SL-", "NO. ")}</span>
+          <Mark size={44} />
         </div>
       </header>
 

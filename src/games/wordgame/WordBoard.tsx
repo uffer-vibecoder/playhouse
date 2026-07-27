@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BrandMark from "@/components/Mark";
 import {
   LENGTH,
   TRIES,
@@ -171,10 +172,13 @@ export default function WordBoard({
       <header>
         <div>
           <h1>Word Guessing</h1>
-          <div className="strapline">Six tries · five letters</div>
+          <div className="titlerow">
+            <span className="strapline">Six tries · five letters</span>
+            <span className="pill-num">{puzzle.id.replace("WG-", "NO. ")}</span>
+          </div>
         </div>
         <div className="badges">
-          <span className="pill-no">{puzzle.id.replace("WG-", "NO. ")}</span>
+          <BrandMark size={44} />
         </div>
       </header>
 

@@ -39,7 +39,18 @@
   --ground-bg-size: auto;
   /* The sheet's paper. Only Full Moon in dark mode is allowed to move it. */
   --paper: #FFFFFF;
+
+  /* How wide the reading column and the puzzle get. One number, because the
+     sheet, the codeword grid and the tile board all derive from it — a 640px
+     column is right on a laptop and a stamp on a 27" monitor. */
+  --measure: 640px;
+  --board: 340px;
 }
+/* Grown in two steps rather than fluidly: the codeword grid is 13 cells across,
+   and a continuously-sized cell lands on fractional pixels, which is where its
+   1px gaps start doubling and disappearing along the row. */
+@media (min-width: 1100px) { :root { --measure: 780px; --board: 460px } }
+@media (min-width: 1500px) { :root { --measure: 900px; --board: 560px } }
 /* Notebook dark, for the same fallback reasons, when the OS asks for it and
    the script has not yet run. */
 @media (prefers-color-scheme: dark) {
@@ -55,7 +66,7 @@
 }
 
 .shell {
-  max-width: 640px;
+  max-width: var(--measure);
   margin: 0 auto;
   padding: 20px 16px 56px;
 }
@@ -111,7 +122,7 @@
    The entry number is structural rather than decorative: it is how a game is
    found again, so the index never reorders and new games append to the bottom.
 ── */
-.page { display: flex; gap: 0; max-width: 940px; margin: 0 auto; }
+.page { display: flex; gap: 0; max-width: calc(var(--measure) + 300px); margin: 0 auto; }
 
 .spine {
   flex: 0 0 76px;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Mark from "@/components/Mark";
 import {
   ALPHA,
   check,
@@ -125,10 +126,13 @@ export default function CryptoBoard({
       <header>
         <div>
           <h1>Cryptogram</h1>
-          <div className="strapline">Every number is a letter</div>
+          <div className="titlerow">
+            <span className="strapline">Every number is a letter</span>
+            <span className="pill-num">{puzzle.id.replace("CG-", "NO. ")}</span>
+          </div>
         </div>
         <div className="badges">
-          <span className="pill-no">{puzzle.id.replace("CG-", "NO. ")}</span>
+          <Mark size={44} />
         </div>
       </header>
 

@@ -63,7 +63,7 @@ body{
    which is the one sanctioned exception and spends the whole remaining
    contrast budget doing it. */
 .sheet{
-  width:100%; max-width:640px; margin:0 auto; background:var(--paper);
+  width:100%; max-width:var(--measure); margin:0 auto; background:var(--paper);
   padding:var(--sheet-pad); border-radius:var(--sheet-radius); box-shadow:var(--sheet-shadow);
   color:var(--ink);
 }
@@ -101,8 +101,18 @@ header{
   border-bottom:3px solid var(--ink); padding-bottom:12px;
 }
 h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; letter-spacing:-.5px; margin:0}
-.strapline{font-size:11px; letter-spacing:2.4px; text-transform:capitalize; color:var(--muted); margin-top:6px}
+.strapline{font-size:11px; letter-spacing:2.4px; text-transform:capitalize; color:var(--muted)}
+.titlerow{display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin-top:8px}
 .badges{display:flex; align-items:center; gap:8px}
+/* The puzzle number, and the one piece of the sheet that follows the theme.
+   It can, because it is no longer the corner badge: the mark holds that
+   position now, and the print rule below hands this back the fixed palette so
+   paper still says which puzzle it is, in the ink everything else is measured
+   against. Fixed #111 on the fill — an inverted ink lands near 1.3:1 there. */
+.pill-num{
+  background:var(--fill); color:#111111; font-family:var(--display); font-weight:600;
+  font-size:13px; letter-spacing:.4px; padding:4px 11px; border-radius:999px; white-space:nowrap;
+}
 .pill-no{
   background:var(--accent); color:var(--ink); font-family:var(--display); font-weight:600;
   font-size:15px; letter-spacing:.4px; padding:7px 14px; border-radius:999px; white-space:nowrap;
@@ -176,7 +186,7 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 .tab[aria-current="true"]{background:var(--fill); border-color:var(--fill)}
 
 /* grid — 13 x 43px on a 1px #111 lattice inside a 3px #111 border */
-.gridwrap{container-type:inline-size; width:100%; max-width:577px; margin:0 auto; position:relative}
+.gridwrap{container-type:inline-size; width:100%; max-width:calc(var(--measure) - 63px); margin:0 auto; position:relative}
 .grid{
   display:grid; grid-template-columns:repeat(13,1fr); gap:1px;
   background:var(--ink); border:3px solid var(--ink); width:100%;
@@ -209,6 +219,15 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
   display:flex; align-items:center; justify-content:center;
   font-family:var(--display); font-weight:500; color:var(--ink);
   text-transform:lowercase; font-size:20px; padding-top:2px;
+}
+/* The fixed sizes above are the handoff's, measured at a 577px grid. Behind
+   @supports they become the same sizes expressed against the container, so a
+   wider desktop grid gets proportionally larger digits and letters instead of
+   9px numerals rattling around a 60px cell. An unsupported unit invalidates the
+   whole declaration, which is why this cannot simply replace them. */
+@supports (font-size:1cqw){
+  .cell .num{font-size:max(7.5px, 1.56cqw)}
+  .cell .ltr{font-size:max(15px, 3.47cqw)}
 }
 @media (max-width:600px){
   .cell .num{font-size:7.5px}
@@ -385,14 +404,18 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 ── */
 .sl-wrap{position:relative; margin:14px 0 10px}
 .sl-board{
-  position:relative; width:100%; max-width:340px; margin:0 auto;
+  container-type:inline-size;
+  position:relative; width:100%; max-width:var(--board); margin:0 auto;
   aspect-ratio:1; background:var(--tile);
   border:2px solid var(--ink); border-radius:14px; padding:6px;
 }
 .sl-tile{
   position:absolute; width:25%; height:25%; margin:0; padding:6px;
   display:grid; place-items:center;
-  font-family:var(--display); font-weight:600; font-size:clamp(18px,6.5vw,26px);
+  font-family:var(--display); font-weight:600;
+  /* against the board, not the viewport: the board has a max width and the
+     viewport does not, so vw kept growing the numerals after the tiles stopped */
+  font-size:clamp(18px, 7.6cqw, 34px);
   font-variant-numeric:tabular-nums;
   color:var(--ink); background:#FFFFFF; cursor:pointer;
   border:2px solid var(--underline); border-radius:10px;
@@ -550,6 +573,54 @@ footer{
    Everything interactive drops away; the on-screen selection does too, so the
    sheet reads as a clean puzzle rather than a screenshot of one in progress.
 ── */
+/* ── bigger on a bigger screen ──────────────────────────────────────────────
+   The measure grows in two steps (see globals.css) and the codeword grid and
+   the tile board follow it on their own, because both are sized from their
+   container. Everything below is sized in pixels instead — a 52px word tile is
+   a 52px word tile whatever the sheet does — so growing has to be said out
+   loud, once, here.
+
+   Sizes only. Nothing in this block changes a colour, a state or a rule; the
+   two-layer split is decided elsewhere and a wide window is not a theme.
+── */
+@media (min-width:1100px){
+  .wg-row{grid-template-columns:repeat(5,64px)}
+  .wg-tile{height:64px; font-size:32px}
+  .wg-krow .key{flex:0 0 40px; height:52px; font-size:17px}
+  .wg-krow .key.wg-wide{flex:0 0 72px; font-size:12px}
+
+  .cg-cell{width:32px}
+  .cg-ltr,.cg-punct{font-size:24px}
+  .cg-num{font-size:11px}
+
+  .sx-row{grid-template-columns:32px 1fr 92px; padding:13px 16px}
+  .sx-eq{font-size:23px}
+  .sx-ans{font-size:23px}
+  .sx-pad{max-width:300px}
+  .sx-pad .key{height:54px; font-size:22px}
+
+  .kcell .kn{font-size:10px}
+  .kcell .kbox{height:34px; font-size:21px}
+  .key{height:40px; font-size:21px}
+  .tcell{height:30px; font-size:16px}
+}
+@media (min-width:1500px){
+  .wg-row{grid-template-columns:repeat(5,72px)}
+  .wg-tile{height:72px; font-size:36px}
+  .wg-krow .key{flex:0 0 44px; height:56px; font-size:19px}
+  .wg-krow .key.wg-wide{flex:0 0 80px}
+
+  .cg-cell{width:36px}
+  .cg-ltr,.cg-punct{font-size:27px}
+
+  .sx-eq,.sx-ans{font-size:26px}
+  .sx-pad{max-width:330px}
+  .sx-pad .key{height:60px; font-size:24px}
+
+  .kcell .kbox{height:38px; font-size:23px}
+  .key{height:44px; font-size:23px}
+}
+
 @media print{
   @page{size:letter portrait; margin:14mm}
   html,body{background:#FFFFFF}
@@ -575,7 +646,7 @@ footer{
   .disclosure > summary{padding:10px 0 6px; color:var(--muted)}
   .disclosure > summary .chev,.disclosure > summary .sum-note{display:none}
   .gridwrap{max-width:150mm; margin:0}
-  .cell,.kbox,.tcell,.pill-no,.theme-tag{print-color-adjust:exact; -webkit-print-color-adjust:exact}
+  .cell,.kbox,.tcell,.pill-no,.pill-num,.theme-tag{print-color-adjust:exact; -webkit-print-color-adjust:exact}
   /* selection is a screen affordance — it should not print */
   .cell.word::before,.cell.same::after{display:none}
   .cell.sel{outline:none}
@@ -599,6 +670,8 @@ footer{
   .badges{flex:0 0 auto; flex-direction:column; align-items:flex-end; gap:6px}
   h1{font-size:clamp(21px, 6.4vw, 30px)}
   .pill-no{font-size:13px; padding:5px 11px}
+  /* paper is not themed */
+  .pill-num{background:var(--accent); color:var(--ink); font-size:12px; padding:4px 10px}
   .pill-diff{font-size:11px; padding:4px 9px}
   .strapline{font-size:10px; letter-spacing:1.8px}
   .pad{grid-template-columns:repeat(7,1fr)}

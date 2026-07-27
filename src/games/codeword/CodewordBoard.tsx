@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Mark from "@/components/Mark";
 import {
   ALPHA,
   buildSlots,
@@ -162,11 +163,14 @@ export default function CodewordBoard({
       <header>
         <div>
           <h1>Codeword</h1>
-          <div className="strapline">Every Letter A–Z Appears At Least Once</div>
+          <div className="titlerow">
+            <span className="strapline">Every Letter A–Z Appears At Least Once</span>
+            <span className="pill-num">{puzzle.title}</span>
+            <span className="pill-diff">{puzzle.difficulty}</span>
+          </div>
         </div>
         <div className="badges">
-          <div className="pill-no">{puzzle.title}</div>
-          <div className="pill-diff">{puzzle.difficulty}</div>
+          <Mark size={44} />
         </div>
       </header>
 

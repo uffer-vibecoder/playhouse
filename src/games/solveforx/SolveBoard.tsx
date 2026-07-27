@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Mark from "@/components/Mark";
 import {
   PROBLEMS,
   backspace,
@@ -169,10 +170,13 @@ export default function SolveBoard({
       <header>
         <div>
           <h1>Solve for X</h1>
-          <div className="strapline">Ten to work through</div>
+          <div className="titlerow">
+            <span className="strapline">Ten to work through</span>
+            <span className="pill-num">{puzzle.id.replace("SX-", "NO. ")}</span>
+          </div>
         </div>
         <div className="badges">
-          <span className="pill-no">{puzzle.id.replace("SX-", "NO. ")}</span>
+          <Mark size={44} />
         </div>
       </header>
 
