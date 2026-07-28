@@ -13,6 +13,14 @@ import {
   liftLimit,
   name,
   rankOf,
+  newRun,
+  purse,
+  targetFor,
+  buy,
+  owned,
+  cellsFor,
+  baseMult,
+  ROUND_RANKS,
   runLength,
   solve,
   stacks,
@@ -25,12 +33,20 @@ import {
   type Table,
 } from "../src/games/freeatro/engine.ts";
 
-const DEAL: Deal = { id: "FA-000", seed: 12345, route: 0, target: 0 };
+const DEAL: Deal = { id: "FA-000", seed: 12345, ranks: 8, route: 0 };
+const RUN = newRun();
+/** A table built by hand for a rules test, at the round deck size. */
+const bare = (): Table => ({
+  columns: Array.from({ length: COLUMNS }, () => []),
+  cells: [null, null, null, null],
+  foundations: [-1, -1, -1, -1],
+  ranks: ROUND_RANKS,
+});
 
 /* ── the deck ─────────────────────────────────────────────────────────────── */
 
 test("a deal uses every card exactly once", () => {
-  const t = deal(99);
+  const t = deal(99, 13);
   const all = t.columns.flat().sort((a, b) => a - b);
   assert.equal(all.length, 52);
   assert.deepEqual(all, Array.from({ length: 52 }, (_, i) => i));
@@ -41,10 +57,11 @@ test("a deal uses every card exactly once", () => {
 test("the same seed always deals the same table", () => {
   assert.deepEqual(deal(4242).columns, deal(4242).columns);
   assert.notDeepEqual(deal(4242).columns, deal(4243).columns);
+  assert.equal(deal(4242).columns.flat().length, ROUND_RANKS * 4, "a round is a short deck");
 });
 
 test("the columns are as even as fifty-two into eight goes", () => {
-  const sizes = deal(7).columns.map((c) => c.length).sort();
+  const sizes = deal(7, 13).columns.map((c) => c.length).sort();
   assert.deepEqual(sizes, [6, 6, 6, 6, 7, 7, 7, 7]);
 });
 
@@ -71,11 +88,7 @@ test("a tableau run goes down a rank and alternates colour", () => {
 });
 
 test("a lift is limited by the cells, and an empty column is worth double", () => {
-  const t: Table = {
-    columns: Array.from({ length: COLUMNS }, () => [0]),
-    cells: [null, null, null, null],
-    foundations: [-1, -1, -1, -1],
-  };
+  const t: Table = { ...bare(), columns: Array.from({ length: COLUMNS }, () => [0]) };
   assert.equal(liftLimit(t), 5, "four cells free, no empty column");
   t.cells[0] = 1;
   assert.equal(liftLimit(t), 4);
@@ -94,7 +107,7 @@ test("run length reads only the ordered tail", () => {
 /* ── moving ───────────────────────────────────────────────────────────────── */
 
 test("an ace goes home and nothing else does yet", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns[0] = [0];   // A♠
   s.table.columns[1] = [1];   // 2♠
   const home = toFoundation(s, { pile: "column", index: 0 });
@@ -106,8 +119,9 @@ test("an ace goes home and nothing else does yet", () => {
 });
 
 test("a king scores thirteen times what an ace does", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns[0] = [12];
+  s.table.ranks = 13;
   s.table.foundations[0] = 11;
   s = toFoundation(s, { pile: "column", index: 0 });
   // a completed suit is also worth a point of multiplier, applied as it lands
@@ -115,7 +129,7 @@ test("a king scores thirteen times what an ace does", () => {
 });
 
 test("an illegal move returns the same state, so nothing counts it", () => {
-  const s = initialState(DEAL);
+  const s = initialState(DEAL, RUN);
   s.table.columns[0] = [0];
   s.table.columns[1] = [39 + 4]; // 5♣ onto A♠ is nonsense
   assert.equal(toColumn(s, { pile: "column", index: 1 }, 0, 1), s);
@@ -123,7 +137,7 @@ test("an illegal move returns the same state, so nothing counts it", () => {
 });
 
 test("cells fill up and then refuse", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   const before = s.table.cells.filter((c) => c === null).length;
   s = toCell(s, 0);
   assert.equal(s.table.cells.filter((c) => c === null).length, before - 1);
@@ -136,7 +150,7 @@ test("cells fill up and then refuse", () => {
 });
 
 test("building a run of three earns multiplier, and breaking it gives it back", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns = Array.from({ length: COLUMNS }, () => []);
   s.table.columns[0] = [5, 13 + 4];      // 6♠ 5♥
   s.table.columns[1] = [39 + 3];         // 4♣
@@ -151,7 +165,7 @@ test("building a run of three earns multiplier, and breaking it gives it back", 
 });
 
 test("undo puts the score back too", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns[0] = [0];
   const start = s;
   s = toFoundation(s, { pile: "column", index: 0 });
@@ -163,14 +177,14 @@ test("undo puts the score back too", () => {
 });
 
 test("undo at the start does nothing", () => {
-  const s = initialState(DEAL);
+  const s = initialState(DEAL, RUN);
   assert.equal(undo(s), s);
 });
 
 /* ── autoplay ─────────────────────────────────────────────────────────────── */
 
 test("autoplay sends up only what can never be needed below", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns = Array.from({ length: COLUMNS }, () => []);
   s.table.foundations = [0, 0, 0, 0];       // all four aces home
   s.table.columns[0] = [1];                  // 2♠ — safe, nothing needs it
@@ -181,9 +195,10 @@ test("autoplay sends up only what can never be needed below", () => {
 });
 
 test("autoplay finishes a board that is already won in all but name", () => {
-  let s = initialState(DEAL);
+  let s = initialState(DEAL, RUN);
   s.table.columns = Array.from({ length: COLUMNS }, () => []);
   s.table.cells = [null, null, null, null];
+  s.table.ranks = 13;
   s.table.foundations = [11, 11, 11, 11];
   s.table.columns[0] = [12, 25, 38, 51].slice(0, 1);
   s.table.columns[1] = [25];
@@ -196,11 +211,7 @@ test("autoplay finishes a board that is already won in all but name", () => {
 /* ── proving a deal ───────────────────────────────────────────────────────── */
 
 test("a board one move from home is solved in one move", () => {
-  const t: Table = {
-    columns: Array.from({ length: COLUMNS }, () => []),
-    cells: [null, null, null, null],
-    foundations: [11, 12, 12, 12],
-  };
+  const t: Table = { ...bare(), ranks: 13, foundations: [11, 12, 12, 12] };
   t.columns[0] = [12];
   assert.equal(solve(t), 1);
 });
@@ -209,12 +220,13 @@ test("a board that cannot be won is reported as such, not guessed at", () => {
   // every column a king on a king: nothing stacks, nothing can be lifted, and
   // the cells cannot hold enough to dig anything out
   const t: Table = {
+    ...bare(),
+    ranks: 13,
     columns: [
       [12, 25], [38, 51], [11, 24], [37, 50],
       [10, 23], [36, 49], [9, 22], [35, 48],
     ],
     cells: [0, 13, 26, 39],
-    foundations: [-1, -1, -1, -1],
   };
   assert.equal(solve(t, 20_000), null);
 });
@@ -231,9 +243,59 @@ test("cloning a table shares nothing with the original", () => {
 });
 
 test("foundationReady only accepts the next card of that suit", () => {
-  const t = deal(1);
+  const t = deal(1, 13);
   t.foundations = [4, -1, -1, -1];
   assert.ok(foundationReady(t, 5), "6♠ follows 5♠");
   assert.ok(!foundationReady(t, 6));
   assert.ok(foundationReady(t, 13), "any ace is welcome");
+});
+
+/* ── the run ──────────────────────────────────────────────────────────────── */
+
+test("the purse pays for clearing a round and nothing for missing one", () => {
+  const run = newRun();
+  assert.equal(purse(run, targetFor(1) - 1, 1), 0, "just short is still short");
+  assert.equal(purse(run, targetFor(1), 1), 3, "three for clearing it");
+  assert.equal(purse(run, targetFor(1) + 100, 1), 5, "and one per fifty over");
+});
+
+test("the target climbs, so a head start stops being enough", () => {
+  assert.ok(targetFor(2) > targetFor(1));
+  assert.ok(targetFor(6) > targetFor(2));
+});
+
+test("an upgrade costs coins and stops at its maximum", () => {
+  let run = { ...newRun(), coins: 100 };
+  const before = run.coins;
+  run = buy(run, "cell");
+  assert.equal(owned(run, "cell"), 1);
+  assert.equal(run.coins, before - 6);
+  assert.equal(cellsFor(run), 5, "a bought cell is a real cell");
+
+  run = buy(run, "cell");
+  const maxed = run;
+  run = buy(run, "cell");
+  assert.equal(run, maxed, "two is the limit, and the third takes no money");
+});
+
+test("an upgrade you cannot afford is not sold to you", () => {
+  const broke = { ...newRun(), coins: 1 };
+  assert.equal(buy(broke, "cell"), broke);
+});
+
+test("a head start raises the multiplier a round opens on", () => {
+  let run = { ...newRun(), coins: 20 };
+  assert.equal(baseMult(run), 1);
+  run = buy(run, "mult");
+  assert.equal(baseMult(run), 2);
+  const s = initialState(DEAL, run);
+  assert.equal(s.score.mult, 2, "and the board opens there");
+});
+
+test("a short round is won when every suit reaches its top rank, not the king", () => {
+  const s = initialState(DEAL, RUN);
+  s.table.foundations = [7, 7, 7, 7];
+  assert.ok(isWon(s.table), "ace to eight is the whole suit here");
+  s.table.foundations = [7, 7, 7, 6];
+  assert.ok(!isWon(s.table));
 });

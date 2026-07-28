@@ -36,22 +36,132 @@ export const name = (card: number) => `${RANKS[rankOf(card)]}${SUITS[suitOf(card
 export const COLUMNS = 8;
 export const CELLS = 4;
 
+/**
+ * How many ranks each suit brings, ace upwards.
+ *
+ * A full 52-card Freecell is twenty minutes and more, which is a lovely way to
+ * spend an evening and the wrong unit for a run of rounds. Eight ranks — ace to
+ * eight, thirty-two cards — plays in about five minutes and still has every
+ * decision the full game has: the cells matter, emptying a column matters, and
+ * digging out a buried ace matters.
+ *
+ * The rank count is stored on the deal rather than assumed, so a longer round
+ * later costs a number in a table and not a rewrite.
+ */
+export const ROUND_RANKS = 8;
+
 export type Deal = {
   id: string;
   seed: number;
+  /** ranks per suit in this deal, ace upwards */
+  ranks: number;
   /** a way home the builder found, in moves — not proved shortest, so not a par */
   route: number;
-  /** what this deal has to be beaten by */
-  target: number;
 };
+
+/* ── a run ────────────────────────────────────────────────────────────────
+   A round is one deal. A run is a sequence of them, and what carries between
+   rounds is a purse: coins earned by beating the target, spent on making the
+   next round easier. That is the loop the whole thing is built around — one
+   deal is a puzzle, but a run is a series of decisions about what to spend on
+   and when to spend it.
+── */
+
+export type Upgrade = "cell" | "mult" | "purse";
+
+export const UPGRADES: { id: Upgrade; name: string; cost: number; note: string; max: number }[] = [
+  { id: "cell", name: "Another cell", cost: 6, note: "one more place to park a card", max: 2 },
+  { id: "mult", name: "Head start", cost: 5, note: "every round opens a multiplier higher", max: 3 },
+  { id: "purse", name: "Deeper pockets", cost: 4, note: "one more coin for every round won", max: 3 },
+];
+
+export type Run = {
+  /** which round is being played, from 1 */
+  round: number;
+  /**
+   * Where in the archive this run started.
+   *
+   * Rounds walk on from here, so two runs are different sequences of deals
+   * while each one stays perfectly reproducible — the same run replayed deals
+   * the same rounds in the same order.
+   */
+  offset: number;
+  coins: number;
+  /** bought upgrades, repeats allowed up to each one's max */
+  bought: Upgrade[];
+  /** each round's score, so a finished run can be read back */
+  scores: number[];
+};
+
+export const newRun = (offset = 0): Run => ({ round: 1, offset, coins: 0, bought: [], scores: [] });
+
+export const owned = (run: Run, id: Upgrade) => run.bought.filter((u) => u === id).length;
+
+/** Cells available this round: four, plus any bought. */
+export const cellsFor = (run: Run) => CELLS + owned(run, "cell");
+
+/** The multiplier a round opens on. */
+export const baseMult = (run: Run) => 1 + owned(run, "mult");
+
+/**
+ * What this round has to beat.
+ *
+ * Every card comes home in a won round, so the chips are fixed — four suits of
+ * 1+2+…+8 is 144. The target is therefore a statement about multiplier, and it
+ * climbs: round one asks for an average of not quite two, and by round six you
+ * cannot reach it without keeping runs standing while you dig.
+ */
+export const targetFor = (round: number) => 240 + (round - 1) * 70;
+
+/**
+ * Coins for a finished round.
+ *
+ * Three for winning at all, one for every fifty points past the target, and
+ * whatever deeper pockets adds. A round that misses its target pays nothing —
+ * the purse rewards clearing a round, not turning up to one.
+ */
+export function purse(run: Run, score: number, round: number): number {
+  if (score < targetFor(round)) return 0;
+  return 3 + Math.floor((score - targetFor(round)) / 50) + owned(run, "purse");
+}
+
+/** Buy one, if it is affordable and not already maxed. */
+export function buy(run: Run, id: Upgrade): Run {
+  const item = UPGRADES.find((u) => u.id === id);
+  if (!item) return run;
+  if (run.coins < item.cost || owned(run, id) >= item.max) return run;
+  return { ...run, coins: run.coins - item.cost, bought: [...run.bought, id] };
+}
+
+/** Which deal this round plays. */
+export const dealFor = (run: Run, deals: Deal[]) =>
+  deals[(run.offset + run.round - 1) % deals.length];
+
+/** Bank the round and move on. */
+export function nextRound(run: Run, score: number): Run {
+  return {
+    ...run,
+    round: run.round + 1,
+    coins: run.coins + purse(run, score, run.round),
+    scores: [...run.scores, score],
+  };
+}
 
 export type Table = {
   /** eight piles, each bottom-to-top */
   columns: number[][];
-  /** four cells, null when empty */
+  /** cells, null when empty — four, or more if the run has bought some */
   cells: (number | null)[];
   /** highest rank placed per suit, -1 for empty */
   foundations: number[];
+  /**
+   * Ranks per suit in play, so the table knows when it is finished.
+   *
+   * Carried here rather than passed to every function that needs it: `isWon`
+   * once read `f === 12` and would have quietly never fired on a short deck,
+   * which is the kind of bug that looks like the game hanging.
+   */
+  ranks: number;
 };
 
 export type Score = {
@@ -61,6 +171,8 @@ export type Score = {
   total: number;
   /** how many alternating runs of three or more have been built */
   runs: number;
+  /** where the multiplier starts, before anything is built — bought, not earned */
+  base: number;
 };
 
 export type State = {
@@ -92,31 +204,41 @@ function rng(seed: number) {
  * every device forever — which is what makes "deal 12" a thing two people can
  * both play rather than a coincidence.
  */
-export function deal(seed: number): Table {
+export function deal(seed: number, ranks = ROUND_RANKS, cells = CELLS): Table {
   const rand = rng(seed);
-  const deck = Array.from({ length: 52 }, (_, i) => i);
+  // suits stay four; it is the ranks that shorten, so colour and alternation —
+  // the whole texture of the tableau — are untouched
+  const deck: number[] = [];
+  for (let suit = 0; suit < 4; suit++) for (let r = 0; r < ranks; r++) deck.push(suit * 13 + r);
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   const columns: number[][] = Array.from({ length: COLUMNS }, () => []);
   deck.forEach((card, i) => columns[i % COLUMNS].push(card));
-  return { columns, cells: Array(CELLS).fill(null), foundations: [-1, -1, -1, -1] };
+  return { columns, cells: Array(cells).fill(null), foundations: [-1, -1, -1, -1], ranks };
 }
 
 export const cloneTable = (t: Table): Table => ({
   columns: t.columns.map((c) => c.slice()),
   cells: t.cells.slice(),
   foundations: t.foundations.slice(),
+  ranks: t.ranks,
 });
 
-export function initialState(d: Deal, restored?: Saved): State {
-  if (restored?.table?.columns?.length === COLUMNS) {
-    return { table: cloneTable(restored.table), score: { ...restored.score }, moves: restored.moves, past: [] };
+export function initialState(d: Deal, run: Run, restored?: Saved): State {
+  const base = baseMult(run);
+  if (restored?.table?.columns?.length === COLUMNS && restored.table.ranks) {
+    return {
+      table: cloneTable(restored.table),
+      score: { ...restored.score, base },
+      moves: restored.moves,
+      past: [],
+    };
   }
   return {
-    table: deal(d.seed),
-    score: { chips: 0, mult: 1, total: 0, runs: 0 },
+    table: deal(d.seed, d.ranks ?? ROUND_RANKS, cellsFor(run)),
+    score: { chips: 0, mult: base, total: 0, runs: 0, base },
     moves: 0,
     past: [],
   };
@@ -199,9 +321,9 @@ export function toFoundation(s: State, from: { pile: "column" | "cell"; index: n
     ...s.score,
     // a completed suit is worth a permanent point of multiplier: the reward for
     // finishing something rather than for hoarding
-    mult: 1 + s.score.runs + finished,
+    mult: s.score.base + s.score.runs + finished,
     chips: s.score.chips + chips,
-    total: s.score.total + chips * (1 + s.score.runs + finished),
+    total: s.score.total + chips * (s.score.base + s.score.runs + finished),
   };
   return push(s, table, score);
 }
@@ -243,7 +365,7 @@ export function toColumn(
     const table = cloneTable(t);
     table.cells[from.index] = null;
     table.columns[to].push(card);
-    return push(s, table, scoreRuns(s.score, table));
+    return push(s, table, scoreRuns(s.score, table, s.score.base));
   }
 
   const src = t.columns[from.index];
@@ -259,7 +381,7 @@ export function toColumn(
   const table = cloneTable(t);
   table.columns[from.index].splice(src.length - count, count);
   table.columns[to].push(...moving);
-  return push(s, table, scoreRuns(s.score, table));
+  return push(s, table, scoreRuns(s.score, table, s.score.base));
 }
 
 /**
@@ -269,10 +391,10 @@ export function toColumn(
  * and a multiplier that only ever went up would reward making a mess and then
  * tidying it repeatedly.
  */
-function scoreRuns(score: Score, table: Table): Score {
+function scoreRuns(score: Score, table: Table, base: number): Score {
   const runs = table.columns.reduce((n, col) => n + (runLength(col) >= 3 ? 1 : 0), 0);
-  const finished = table.foundations.filter((f) => f === 12).length;
-  return { ...score, runs, mult: 1 + runs + finished };
+  const finished = table.foundations.filter((f) => f === table.ranks - 1).length;
+  return { ...score, runs, mult: base + runs + finished };
 }
 
 export function undo(s: State): State {
@@ -302,7 +424,7 @@ export function autoplay(s: State): State {
       const black = Math.min(t.foundations[0], t.foundations[3]);
       return isRed(card) ? black >= r - 1 : red >= r - 1;
     };
-    for (let i = 0; i < CELLS; i++) {
+    for (let i = 0; i < t.cells.length; i++) {
       const c = t.cells[i];
       if (c !== null && safe(c)) { out = toFoundation(out, { pile: "cell", index: i }); again = true; break; }
     }
@@ -315,7 +437,7 @@ export function autoplay(s: State): State {
   return out;
 }
 
-export const isWon = (t: Table) => t.foundations.every((f) => f === 12);
+export const isWon = (t: Table) => t.foundations.every((f) => f === t.ranks - 1);
 
 /* ── proving a deal ───────────────────────────────────────────────────────── */
 
@@ -355,11 +477,12 @@ function key(t: Table): string {
  *   · cells in use, since a full set of cells is how a game strands itself
  */
 function distance(t: Table): number {
+  const cards = t.ranks * 4;
   const home = t.foundations.reduce((n, f) => n + f + 1, 0);
   let buried = 0;
   for (let suit = 0; suit < 4; suit++) {
     const want = t.foundations[suit] + 1;
-    if (want > 12) continue;
+    if (want >= t.ranks) continue;
     const card = suit * 13 + want;
     for (const col of t.columns) {
       const at = col.indexOf(card);
@@ -370,7 +493,7 @@ function distance(t: Table): number {
     }
   }
   const cellsUsed = t.cells.filter((c) => c !== null).length;
-  return (52 - home) * 3 + buried * 2 + cellsUsed;
+  return (cards - home) * 3 + buried * 2 + cellsUsed;
 }
 
 /**
@@ -460,7 +583,7 @@ function successors(t: Table): Table[] {
     out.push({ table: nt, rank: 0 });
   };
 
-  for (let i = 0; i < CELLS; i++) {
+  for (let i = 0; i < t.cells.length; i++) {
     const c = t.cells[i];
     if (c !== null)
       tryFoundation(c, () => {
@@ -500,7 +623,7 @@ function successors(t: Table): Table[] {
     }
   }
 
-  for (let i = 0; i < CELLS; i++) {
+  for (let i = 0; i < t.cells.length; i++) {
     const c = t.cells[i];
     if (c === null) continue;
     for (let to = 0; to < COLUMNS; to++) {

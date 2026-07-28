@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Mark from "@/components/Mark";
 import {
-  CELLS,
   COLUMNS,
   SUITS,
   autoplay,
@@ -12,6 +11,7 @@ import {
   isWon,
   liftLimit,
   name,
+  targetFor,
   runLength,
   suitOf,
   toCell,
@@ -20,6 +20,7 @@ import {
   toSave,
   undo as undoMove,
   type Deal,
+  type Run,
   type Saved,
   type State,
 } from "./engine";
@@ -33,34 +34,45 @@ const GAME_ID = "freeatro";
 /** Where a selected card is sitting. */
 type Held = { pile: "column" | "cell"; index: number; count: number } | null;
 
-export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: () => void }) {
-  const [state, setState] = useState<State>(() => initialState(deal));
+export default function FreeAtroBoard({
+  deal,
+  run,
+  onWon,
+}: {
+  deal: Deal;
+  run: Run;
+  onWon: (score: number) => void;
+}) {
+  const [state, setState] = useState<State>(() => initialState(deal, run));
   const [restoredSlot, setRestoredSlot] = useState<string | null>(null);
   const [held, setHeld] = useState<Held>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const wonOnce = useRef(false);
 
+  // the round is part of the slot: the same deal at round four is a different
+  // problem from the same deal at round one, because the target has moved
   const slot = useMemo(
-    () => slotKey(GAME_ID, deal.id, fingerprint([[deal.seed]], String(deal.seed))),
-    [deal]
+    () => slotKey(GAME_ID, `${deal.id}-r${run.round}`, fingerprint([[deal.seed]], String(deal.seed))),
+    [deal, run.round]
   );
   const timer = useTimer(slot);
   const { stop: stopTimer, ms: elapsed } = timer;
   const restoring = restoredSlot !== slot;
+  const target = targetFor(run.round);
 
   useEffect(() => {
     let alive = true;
     wonOnce.current = false;
     loadProgress<Saved>(slot).then((rec) => {
       if (!alive) return;
-      setState(initialState(deal, rec?.entries));
+      setState(initialState(deal, run, rec?.entries));
       setHeld(null);
       setCelebrate(false);
       setRestoredSlot(slot);
     });
     return () => { alive = false; };
-  }, [slot, deal]);
+  }, [slot, deal, run]);
 
   const won = isWon(state.table);
   useEffect(() => {
@@ -81,12 +93,13 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
       void recordResult(
         slot,
         GAME_ID,
-        { score: state.score.total, moves: state.moves, target: deal.target },
+        { score: state.score.total, moves: state.moves, round: run.round, target },
         elapsed
       );
+      onWon(state.score.total);
     }
     if (!won) wonOnce.current = false;
-  }, [won, restoring, slot, state.score.total, state.moves, deal.target, stopTimer, elapsed]);
+  }, [won, restoring, slot, state.score.total, state.moves, run.round, target, stopTimer, elapsed, onWon]);
 
   /**
    * One tap picks up, the next puts down.
@@ -152,7 +165,7 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
   };
 
   const { score } = state;
-  const beat = score.total >= deal.target;
+  const beat = score.total >= target;
 
   const card = (c: number, extra = "") => (
     <span className={`fa-card${isRed(c) ? " red" : ""}${extra}`} key={c}>
@@ -167,8 +180,8 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
         <div>
           <h1>Free-Atro</h1>
           <div className="titlerow">
-            <span className="strapline">Freecell, scored</span>
-            <span className="pill-num">{deal.id.replace("FA-", "DEAL ")}</span>
+            <span className="strapline">Freecell, scored · {run.coins} in the purse</span>
+            <span className="pill-num">Round {run.round}</span>
           </div>
         </div>
         <div className="badges">
@@ -203,17 +216,18 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
         <span className="fa-mult">{score.mult}</span>
         <span className="fa-total">
           <b>{score.total}</b>
-          <span>of {deal.target}</span>
+          <span>of {target}</span>
         </span>
         <span className="fa-bar" aria-hidden="true">
-          <span style={{ width: `${Math.min(100, (score.total / deal.target) * 100)}%` }} />
+          <span style={{ width: `${Math.min(100, (score.total / target) * 100)}%` }} />
         </span>
       </div>
 
       <div className="fa-top">
         <div className="fa-cells">
-          {Array.from({ length: CELLS }, (_, i) => {
-            const c = state.table.cells[i];
+          {/* from the table, not the constant: a run can buy a fifth cell, and
+              rendering four would leave it real but invisible */}
+          {state.table.cells.map((c, i) => {
             const on = held?.pile === "cell" && held.index === i;
             return (
               <button
@@ -290,8 +304,8 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
       {won && (
         <div className="win">
           {beat
-            ? `Home in ${state.moves}, and ${score.total} beats ${deal.target}.`
-            : `Home in ${state.moves} for ${score.total} — the target was ${deal.target}. Tidier next time.`}
+            ? `Home in ${state.moves}, and ${score.total} beats ${target}.`
+            : `Home in ${state.moves} for ${score.total} — the target was ${target}.`}
         </div>
       )}
 
@@ -303,16 +317,13 @@ export default function FreeAtroBoard({ deal, onNext }: { deal: Deal; onNext?: (
         <button className="tool" onClick={send}>
           Send home
         </button>
-        <button className="tool" onClick={() => setState(initialState(deal))}>
+        <button className="tool" onClick={() => setState(initialState(deal, run))}>
           Start over
-        </button>
-        <button className="tool" onClick={onNext}>
-          Next deal
         </button>
       </div>
 
       <footer>
-        <span>Free-Atro · every deal has been won before it shipped</span>
+        <span>Free-Atro · round {run.round} · every deal has been won before it shipped</span>
         <span>{saved?.where === "cloud" ? "Saved to your account" : "Saved on this device"}</span>
       </footer>
     </div>

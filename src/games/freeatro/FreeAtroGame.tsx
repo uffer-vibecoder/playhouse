@@ -2,45 +2,66 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import FreeAtroBoard from "./FreeAtroBoard";
-import type { Deal } from "./engine";
+import Shop from "./Shop";
+import {
+  dealFor,
+  newRun,
+  nextRound,
+  buy,
+  type Deal,
+  type Run,
+  type Upgrade,
+} from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadProgress, saveProgress } from "@/lib/progress";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "freeatro";
-
-const slotOf = (d: Deal) => slotKey(GAME_ID, d.id, fingerprint([[d.seed]], String(d.seed)));
+/** One slot for the run itself: there is only ever one on the go. */
+const RUN_SLOT = "freeatro:run:v1";
 
 export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
-  const want = useSearchParams().get("p");
-  const [picked, setPicked] = useState<number | null>(null);
-  const asked = want ? deals.findIndex((d) => d.id === want) : -1;
-  const index = picked ?? (asked >= 0 ? asked : 0);
-  const setIndex = useCallback(
-    (v: number | ((i: number) => number)) =>
-      setPicked((prev) => {
-        const cur = prev ?? 0;
-        return typeof v === "function" ? v(cur) : v;
-      }),
-    []
-  );
+  const [run, setRun] = useState<Run | null>(null);
+  /** the score just posted, which is what the shop is reporting on */
+  const [justScored, setJustScored] = useState<number | null>(null);
 
-  const [solved, setSolved] = useState<Set<string>>(new Set());
-  const [pickerOpen, setPickerOpen] = useState(false);
-
+  /* A run in progress outlives a reload — it is the thing being played, not the
+     board. Restored before anything renders, so a run is never silently lost to
+     a refresh. */
   useEffect(() => {
-    void loadSolvedSet(GAME_ID).then(setSolved);
+    let alive = true;
+    loadProgress<Run>(RUN_SLOT).then((rec) => {
+      if (!alive) return;
+      const stored = rec?.entries;
+      setRun(
+        stored && typeof stored.round === "number"
+          ? stored
+          : // where in the archive this run begins; every run is a different
+            // sequence of deals, each one reproducible from its own offset
+            newRun(Math.floor(Math.random() * deals.length))
+      );
+    });
+    return () => { alive = false; };
+  }, [deals.length]);
+
+  const keep = useCallback((next: Run) => {
+    setRun(next);
+    void saveProgress<Run>(RUN_SLOT, GAME_ID, next, false);
   }, []);
 
-  const goNext = useCallback(
-    () => setIndex((i) => (i + 1) % deals.length),
-    [deals.length, setIndex]
-  );
+  const onWon = useCallback((score: number) => setJustScored(score), []);
 
-  const doneCount = deals.filter((d) => solved.has(slotOf(d))).length;
-  const deal = deals[index];
+  const carryOn = () => {
+    if (!run || justScored === null) return;
+    const cleared = justScored >= 240 + (run.round - 1) * 70;
+    keep(cleared ? nextRound(run, justScored) : newRun(Math.floor(Math.random() * deals.length)));
+    setJustScored(null);
+  };
+
+  if (!run) return <main className="shell"><p className="nothingyet">Dealing…</p></main>;
+
+  const deal = dealFor(run, deals);
 
   return (
     <main className="shell">
@@ -50,44 +71,16 @@ export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
         <AuthBar gameId={GAME_ID} />
       </div>
 
-      <div className="sheet" style={{ marginBottom: 14 }}>
-        <details
-          className="disclosure noprint"
-          open={pickerOpen}
-          onToggle={(e) => setPickerOpen((e.target as HTMLDetailsElement).open)}
-          style={{ borderTop: 0, marginTop: 0 }}
-        >
-          <summary>
-            <span className="chev" />
-            Choose a deal
-            <span className="sum-note">
-              {deal.id.replace("FA-", "DEAL ")} of {deals.length}
-              {doneCount ? ` · ${doneCount} won` : ""}
-            </span>
-          </summary>
-          <div className="disclosure-body">
-            <div className="tabs">
-              {deals.map((d, i) => (
-                <button
-                  key={d.id}
-                  className="tab"
-                  aria-current={i === index ? "true" : undefined}
-                  onClick={() => {
-                    setIndex(i);
-                    setPickerOpen(false);
-                  }}
-                  title={`a route home in ${d.route} moves exists`}
-                >
-                  {d.id.replace("FA-", "")}
-                  {solved.has(slotOf(d)) ? " ✓" : ""}
-                </button>
-              ))}
-            </div>
-          </div>
-        </details>
-      </div>
-
-      <FreeAtroBoard deal={deal} onNext={goNext} />
+      {justScored !== null ? (
+        <Shop
+          run={run}
+          score={justScored}
+          onBuy={(id: Upgrade) => keep(buy(run, id))}
+          onNext={carryOn}
+        />
+      ) : (
+        <FreeAtroBoard deal={deal} run={run} onWon={onWon} />
+      )}
     </main>
   );
 }

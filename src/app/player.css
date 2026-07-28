@@ -670,7 +670,32 @@ footer{
 .fa-rank{font-variant-numeric:tabular-nums}
 .fa-suit{font-size:13px}
 
+.fa-shop{margin-top:0}
+.fa-purse{
+  display:flex; align-items:baseline; gap:8px; margin:12px 0;
+  padding:12px 16px; border:2px solid var(--ink); border-radius:12px; background:var(--fill-tint);
+}
+.fa-purse b{font-family:var(--display); font-size:28px; color:#111111}
+.fa-purse span{font-size:12px; color:#4A4A4A}
+
+.fa-wares{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px}
+.fa-ware{
+  display:grid; gap:5px; justify-items:start; text-align:left; padding:14px;
+  border:2px solid var(--ink); border-radius:12px; background:#FFFFFF; cursor:pointer;
+}
+.fa-ware:hover:not(:disabled){background:var(--fill-tint)}
+/* an upgrade you cannot afford stays legible: it is information about what to
+   aim for, not a thing to be hidden away */
+.fa-ware:disabled{cursor:default; border-color:var(--underline); background:var(--tile)}
+.fa-warename{font-family:var(--display); font-weight:600; font-size:16px; color:var(--ink)}
+.fa-warenote{font-size:11px; line-height:1.45; color:var(--body)}
+.fa-warecost{
+  margin-top:2px; font-size:10px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--muted);
+}
+
 @media (max-width:560px){
+  .fa-wares{grid-template-columns:1fr}
   .fa-table{gap:3px}
   .fa-card{height:54px; font-size:12px; padding:3px 3px}
   .fa-suit{font-size:10px}

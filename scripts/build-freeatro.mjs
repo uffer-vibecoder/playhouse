@@ -18,22 +18,16 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { deal, solve } from "../src/games/freeatro/engine.ts";
+import { ROUND_RANKS, deal, solve } from "../src/games/freeatro/engine.ts";
 
 const OUT = "src/data/freeatro.json";
-const WANT = Number(process.argv[2] ?? 40);
+const WANT = Number(process.argv[2] ?? 60);
 
-/**
- * Every card comes home in a finished game, so the chips are always the same —
- * 4 × (1+2+…+13) = 364. What varies is the multiplier they land under, which is
- * entirely down to how much of the tableau you bothered to build.
- *
- * So the target is a statement about multiplier, not about luck: 720 is roughly
- * "finish with an average multiplier of two". Winning without building anything
- * scores 364 and misses it.
+/*
+ * Rounds are short decks — ace to eight, thirty-two cards — because a round has
+ * to be about five minutes for a run of them to make sense. The targets live in
+ * the engine and climb per round; nothing about them belongs in a deal.
  */
-const CHIPS_IF_WON = 364;
-const TARGET = Math.round(CHIPS_IF_WON * 2);
 
 const existing = existsSync(OUT) ? JSON.parse(readFileSync(OUT, "utf8")) : [];
 const out = [...existing];
@@ -50,7 +44,7 @@ while (out.length - startAt < WANT && tried < WANT * 6) {
   tried++;
 
   const t0 = Date.now();
-  const route = solve(deal(seed), 250_000);
+  const route = solve(deal(seed, ROUND_RANKS), 250_000);
   const ms = Date.now() - t0;
   slowest = Math.max(slowest, ms);
 
@@ -62,8 +56,8 @@ while (out.length - startAt < WANT && tried < WANT * 6) {
   out.push({
     id: `FA-${String(n + 1).padStart(3, "0")}`,
     seed,
+    ranks: ROUND_RANKS,
     route,
-    target: TARGET,
   });
 }
 
@@ -81,7 +75,7 @@ console.log(
    quietly invalidated the file. */
 let broken = 0;
 for (const d of out) {
-  if (solve(deal(d.seed), 400_000) === null) {
+  if (solve(deal(d.seed, d.ranks), 400_000) === null) {
     broken++;
     console.error(`  ${d.id}: no longer winnable`);
   }
