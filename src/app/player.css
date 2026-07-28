@@ -634,6 +634,10 @@ footer{
   color:var(--ink); text-transform:uppercase;
 }
 .wt-cell.on{background:var(--fill); border-color:var(--ink)}
+/* a hinted letter: shown, but not claimed. No fill and a lighter ink, so a
+   glance at a finished grid still tells you which letters you found and which
+   ones you were handed. */
+.wt-cell.given{color:var(--muted); border-style:dashed; border-color:var(--underline)}
 
 /* ── word tray, in motion ────────────────────────────────────────────────────
    A found word should land rather than appear. Letters arrive left to right,
@@ -699,12 +703,24 @@ footer{
 }
 .wt-seat{
   position:absolute; inset:0; display:grid; place-items:center;
-  /* out to the rim, then back upright */
+  /* out to the rim, then back upright.
+     The radius is a percentage of the ring rather than a pixel figure so the
+     geometry is the same at every size — which is what lets the trace below be
+     drawn from the seat number alone, with nothing to measure. */
   transform:
     rotate(calc(var(--i) * 360deg / var(--n)))
-    translateY(calc(min(78vw, 250px) / -2 + 27px))
+    translateY(-38%)
     rotate(calc(var(--i) * -360deg / var(--n)));
 }
+
+/* the line joining what you have tapped so far, in the order you tapped it —
+   the spelling as a shape, so a wrong turn is visible before you press Enter */
+.wt-trace{position:absolute; inset:0; pointer-events:none; overflow:visible}
+.wt-trace polyline{
+  fill:none; stroke:var(--fill-text); stroke-width:1.7; opacity:.5;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.wt-trace circle{fill:var(--fill-text); opacity:.5}
 .wt-tray{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:6px 0 10px}
 .wt-letter{
   width:52px; height:52px; margin:0; padding:0;
@@ -730,12 +746,6 @@ footer{
   .wt-cell,.wt-void{min-width:0}
   .wt-cell{font-size:13px; border-width:1.5px}
   .wt-letter{width:46px; height:46px; font-size:20px}
-  .wt-seat{
-    transform:
-      rotate(calc(var(--i) * 360deg / var(--n)))
-      translateY(calc(min(78vw, 250px) / -2 + 24px))
-      rotate(calc(var(--i) * -360deg / var(--n)));
-  }
   .wt-say{padding:0 48px; font-size:17px}
 }
 

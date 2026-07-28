@@ -52,24 +52,42 @@ export type State = {
   extras: string[];
   /** what is being spelled right now, as letter positions in the tray */
   picked: number[];
+  /**
+   * Cells given away by a hint, as `"x,y"` keys.
+   *
+   * Kept as cells rather than a count so a reload puts the same letters back —
+   * a hint you paid for and then lost to a refresh is worse than no hint.
+   */
+  shown: string[];
 };
 
-export type Saved = { found: string[]; extras: string[] };
+export type Saved = { found: string[]; extras: string[]; shown?: string[] };
+
+/** Hints per tray. Three is enough to break a stuck grid open, few enough to
+ *  still be a decision. */
+export const HINTS = 3;
 
 export function initialState(puzzle: Puzzle, restored?: Saved): State {
   const inGrid = new Set(puzzle.words.map((p) => p.word));
   const spare = new Set(puzzle.bonus);
+  const real = new Set(cells(puzzle).map((c) => `${c.x},${c.y}`));
   return {
     // filtered on the way in: a save from an older archive could otherwise
     // restore a word this tray no longer holds and leave the grid unfillable
     found: (restored?.found ?? []).filter((w) => inGrid.has(w)),
     extras: (restored?.extras ?? []).filter((w) => spare.has(w)),
+    // same reasoning, and it also caps a save that claims more hints than exist
+    shown: (restored?.shown ?? []).filter((k) => real.has(k)).slice(0, HINTS),
     picked: [],
     shuffles: 0,
   };
 }
 
-export const toSave = (s: State): Saved => ({ found: s.found, extras: s.extras });
+export const toSave = (s: State): Saved => ({
+  found: s.found,
+  extras: s.extras,
+  shown: s.shown,
+});
 
 /* ── the grid ─────────────────────────────────────────────────────────────── */
 
@@ -102,6 +120,59 @@ export const cellsOf = (p: Placed): string[] =>
   Array.from({ length: p.word.length }, (_, i) =>
     p.across ? `${p.x + i},${p.y}` : `${p.x},${p.y + i}`
   );
+
+/** Which cells are showing a letter because a word through them was found. */
+export function lit(puzzle: Puzzle, s: State): Set<string> {
+  const on = new Set<string>();
+  for (const p of puzzle.words) if (s.found.includes(p.word)) for (const k of cellsOf(p)) on.add(k);
+  return on;
+}
+
+/* ── hints ────────────────────────────────────────────────────────────────────
+   Three per tray, and each one gives away a single letter in the grid rather
+   than a whole word. A word handed over ends that word; a letter reopens it.
+
+   Which letter: the first still-blank cell of the shortest word not yet found,
+   skipping any cell in a word that has already been helped. So three hints are
+   a foothold in three different words rather than the slow spelling-out of one
+   — and the shortest word first, because the three-letter entries are where a
+   stuck grid usually cracks.
+
+   The rule is per *cell*, not per word, because a cell belongs to two words
+   where they cross. Preferring an unhelped word alone let a hint land on a
+   crossing and quietly hand a second letter to a word that had already had one.
+── */
+
+export const hintsLeft = (s: State) => HINTS - s.shown.length;
+
+/** The cell a hint would give away, or null if there is nothing left to give. */
+export function hintTarget(puzzle: Puzzle, s: State): string | null {
+  if (hintsLeft(s) <= 0) return null;
+  const on = lit(puzzle, s);
+  const open = puzzle.words
+    .filter((p) => !s.found.includes(p.word))
+    .sort((a, b) => a.word.length - b.word.length);
+
+  /** does some word through this cell already have a letter given? */
+  const helped = (k: string) =>
+    puzzle.words.some((p) => cellsOf(p).includes(k) && cellsOf(p).some((c) => s.shown.includes(c)));
+
+  const firstBlank = (fresh: boolean) => {
+    for (const p of open)
+      for (const k of cellsOf(p))
+        if (!on.has(k) && !s.shown.includes(k) && !(fresh && helped(k))) return k;
+    return null;
+  };
+
+  // somewhere nothing has been given away yet, else anywhere still blank
+  return firstBlank(true) ?? firstBlank(false);
+}
+
+/** Spend a hint. A no-op — costing nothing — when there is nothing to reveal. */
+export function hint(puzzle: Puzzle, s: State): State {
+  const k = hintTarget(puzzle, s);
+  return k ? { ...s, shown: [...s.shown, k] } : s;
+}
 
 /* ── spelling ─────────────────────────────────────────────────────────────── */
 

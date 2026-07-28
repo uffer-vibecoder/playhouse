@@ -113,7 +113,7 @@ test("run length reads only the ordered tail", () => {
 /* ── moving ───────────────────────────────────────────────────────────────── */
 
 test("an ace goes home and nothing else does yet", () => {
-  let s = initialState(DEAL, RUN);
+  const s = initialState(DEAL, RUN);
   s.table.columns[0] = [0];   // A♠
   s.table.columns[1] = [1];   // 2♠
   const home = toFoundation(s, { pile: "column", index: 0 });

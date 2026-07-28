@@ -9,8 +9,6 @@ import {
   type Games,
 } from "../src/lib/achievements.ts";
 
-const slotOf = (p: ArchiveEntry) => `g:${p.id}`;
-
 const game = (id: string, name: string, puzzles: ArchiveEntry[]): Games => ({
   id,
   name,

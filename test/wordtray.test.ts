@@ -5,11 +5,15 @@ import {
   cells,
   cellsOf,
   clearPick,
+  hint,
+  hintTarget,
+  hintsLeft,
+  HINTS,
   initialState,
   isSolved,
   judge,
+  lit,
   pick,
-  spelling,
   submit,
   toSave,
   trayOrder,
@@ -227,4 +231,90 @@ test("a save carries the finds and drops anything the tray no longer holds", () 
   const back = initialState(P, { found: [target, "NOTAWORDHERE"], extras: ["ALSONOT"] });
   assert.deepEqual(back.found, [target], "junk from an older archive is discarded");
   assert.deepEqual(back.extras, []);
+});
+
+/* ── hints ────────────────────────────────────────────────────────────────── */
+
+test("a hint gives one letter, and only three of them", () => {
+  let s = initialState(P);
+  assert.equal(hintsLeft(s), HINTS);
+  for (let i = 1; i <= HINTS; i++) {
+    s = hint(P, s);
+    assert.equal(s.shown.length, i);
+    assert.equal(hintsLeft(s), HINTS - i);
+  }
+  const spent = hint(P, s);
+  assert.equal(spent, s, "the fourth ask changes nothing at all");
+  assert.equal(hintTarget(P, s), null, "and the button has nothing to offer");
+});
+
+test("a hinted cell is a real, still-blank square of the grid", () => {
+  const real = new Set(cells(P).map((c) => `${c.x},${c.y}`));
+  let s = initialState(P);
+  for (let i = 0; i < HINTS; i++) {
+    const k = hintTarget(P, s)!;
+    assert.ok(real.has(k), `${k} is not part of any word`);
+    assert.ok(!s.shown.includes(k), "and not one already given");
+    s = hint(P, s);
+  }
+});
+
+test("no word is given two of its letters", () => {
+  // spending every hint on one word would be the worst of both — no help
+  // anywhere else, and one word simply handed over. A cell belongs to two words
+  // where they cross, so this has to hold for the crossing word too: the first
+  // version of the rule looked at words rather than cells and failed here.
+  for (const p of archive.slice(0, 30)) {
+    let s = initialState(p);
+    for (let i = 0; i < HINTS; i++) s = hint(p, s);
+    for (const w of p.words) {
+      const n = cellsOf(w).filter((k) => s.shown.includes(k)).length;
+      assert.ok(n <= 1, `${p.id}: ${w.word} was handed ${n} of its letters`);
+    }
+  }
+});
+
+test("the first hint goes to one of the shortest words", () => {
+  const shortest = Math.min(...P.words.map((p) => p.word.length));
+  const k = hintTarget(P, initialState(P))!;
+  const through = P.words.filter((p) => cellsOf(p).includes(k));
+  assert.ok(
+    through.some((p) => p.word.length === shortest),
+    `${k} is only in ${through.map((p) => p.word).join(", ")}`
+  );
+});
+
+test("a hint never points at a letter a crossing word already showed", () => {
+  const first = P.words[0];
+  let s = submit(P, spell(P, first.word)).state;
+  const on = lit(P, s);
+  assert.ok(on.size > 0);
+  for (let i = 0; i < HINTS; i++) {
+    const k = hintTarget(P, s);
+    if (!k) break;
+    assert.ok(!on.has(k), `${k} is already filled in`);
+    s = hint(P, s);
+  }
+});
+
+test("a solved grid has nothing left to hint at", () => {
+  let s = initialState(P);
+  for (const { word } of P.words) s = submit(P, { ...spell(P, word), found: s.found }).state;
+  assert.ok(isSolved(P, s));
+  assert.equal(hintTarget(P, s), null);
+});
+
+test("hints survive a reload, and a save cannot invent extra ones", () => {
+  const s = hint(P, hint(P, initialState(P)));
+  const back = initialState(P, toSave(s));
+  assert.deepEqual(back.shown, s.shown, "the same two letters come back");
+  assert.equal(hintsLeft(back), HINTS - 2, "and they are still spent");
+
+  const greedy = initialState(P, {
+    found: [],
+    extras: [],
+    shown: [...cells(P).slice(0, 9).map((c) => `${c.x},${c.y}`), "99,99"],
+  });
+  assert.equal(greedy.shown.length, HINTS, "a save claiming nine hints gets three");
+  assert.ok(!greedy.shown.includes("99,99"), "and a cell off the grid is dropped");
 });

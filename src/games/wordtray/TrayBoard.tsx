@@ -6,8 +6,12 @@ import {
   cells,
   cellsOf,
   clearPick,
+  hint,
+  hintTarget,
+  hintsLeft,
   initialState,
   isSolved,
+  lit,
   pick,
   shuffle,
   spelling,
@@ -55,11 +59,10 @@ export default function TrayBoard({
 
   const order = useMemo(() => trayOrder(puzzle, state.shuffles), [puzzle, state.shuffles]);
   const grid = useMemo(() => cells(puzzle), [puzzle]);
-  const filled = useMemo(() => {
-    const on = new Set<string>();
-    for (const p of puzzle.words) if (state.found.includes(p.word)) for (const k of cellsOf(p)) on.add(k);
-    return on;
-  }, [puzzle, state.found]);
+  const filled = useMemo(() => lit(puzzle, state), [puzzle, state]);
+  const given = useMemo(() => new Set(state.shown), [state.shown]);
+  /** the cell a hint just gave, so it can arrive rather than blink on */
+  const [revealed, setRevealed] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -94,12 +97,22 @@ export default function TrayBoard({
       void recordResult(
         slot,
         GAME_ID,
-        { words: puzzle.words.length, bonus: state.extras.length },
+        { words: puzzle.words.length, bonus: state.extras.length, hints: state.shown.length },
         elapsed
       );
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, puzzle.words.length, state.extras.length, stopTimer, elapsed]);
+  }, [
+    solved,
+    restoring,
+    onSolved,
+    slot,
+    puzzle.words.length,
+    state.extras.length,
+    state.shown.length,
+    stopTimer,
+    elapsed,
+  ]);
 
   const send = useCallback(() => {
     setState((s) => {
@@ -128,6 +141,20 @@ export default function TrayBoard({
     return () => clearTimeout(id);
   }, [landing]);
 
+  useEffect(() => {
+    if (!revealed) return;
+    const id = setTimeout(() => setRevealed(null), 900);
+    return () => clearTimeout(id);
+  }, [revealed]);
+
+  const target = hintTarget(puzzle, state);
+  const askHint = useCallback(() => {
+    const k = hintTarget(puzzle, state);
+    if (!k) return;
+    setRevealed(k);
+    setState((s) => hint(puzzle, s));
+  }, [puzzle, state]);
+
   /* the physical keyboard, for anyone who would rather type than tap */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -151,6 +178,18 @@ export default function TrayBoard({
   }, [order, puzzle.letters, send]);
 
   const word = spelling(puzzle, state);
+
+  /** where each tapped letter sits in the ring, in the order it was tapped */
+  const trace = useMemo(() => {
+    const n = order.length;
+    return state.picked
+      .map((i) => order.indexOf(i))
+      .filter((seat) => seat >= 0)
+      .map((seat): [number, number] => {
+        const a = (seat / n) * 2 * Math.PI;
+        return [50 + 38 * Math.sin(a), 50 - 38 * Math.cos(a)];
+      });
+  }, [state.picked, order]);
 
   return (
     <div className="sheet">
@@ -182,6 +221,9 @@ export default function TrayBoard({
             kept and counted, never marked wrong. There are no clues because the letters are
             the clue.
           </p>
+          <p className="intro">
+            Stuck? <b>Hint</b> gives away one letter in the grid — three per tray, and no more.
+          </p>
         </div>
       </details>
 
@@ -201,18 +243,25 @@ export default function TrayBoard({
           const y = Math.floor(i / puzzle.w);
           const cell = grid.find((c) => c.x === x && c.y === y);
           if (!cell) return <span className="wt-void" key={i} aria-hidden="true" />;
-          const on = filled.has(`${x},${y}`);
+          const key = `${x},${y}`;
+          const on = filled.has(key);
+          // a hinted letter shows, but pale and unfilled — it is help, not a
+          // word you found, and the grid should not claim otherwise
+          const help = !on && given.has(key);
           // how far along the landing word this cell sits, so the letters
           // arrive left to right rather than all at once
           const place = landing
             ? puzzle.words
                 .filter((p) => p.word === landing)
-                .map((p) => cellsOf(p).indexOf(`${x},${y}`))
+                .map((p) => cellsOf(p).indexOf(key))
                 .find((n) => n >= 0)
             : undefined;
+          const arriving = place !== undefined || key === revealed;
           return (
             <span
-              className={"wt-cell" + (on ? " on" : "") + (place !== undefined ? " landing" : "")}
+              className={
+                "wt-cell" + (on ? " on" : "") + (help ? " given" : "") + (arriving ? " landing" : "")
+              }
               key={i}
               style={
                 place !== undefined
@@ -220,7 +269,7 @@ export default function TrayBoard({
                   : undefined
               }
             >
-              {on ? cell.letter : ""}
+              {on || help ? cell.letter : ""}
             </span>
           );
         })}
@@ -233,6 +282,18 @@ export default function TrayBoard({
           rotated back upright — the float animation then composes on top rather
           than fighting the placement. */}
       <div className="wt-ring" style={{ "--n": order.length } as React.CSSProperties}>
+        {/* The trace, first so it sits under the letters and the word.
+            Seat i is at 38% of the ring from the middle, turned i/n of the way
+            round from the top — the same numbers the CSS uses, which is why the
+            radius there is a percentage and not a pixel count. */}
+        {trace.length > 1 && (
+          <svg className="wt-trace" viewBox="0 0 100 100" aria-hidden="true">
+            <polyline points={trace.map(([x, y]) => `${x},${y}`).join(" ")} />
+            {trace.map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r={1.1} />
+            ))}
+          </svg>
+        )}
         <div className={"wt-say" + (say ? ` ${say.kind}` : "")} role="status">
           {say?.text ?? (word || "")}
         </div>
@@ -267,6 +328,17 @@ export default function TrayBoard({
             how you stop seeing the word that is in it */}
         <button className="tool" onClick={() => setState(shuffle)} disabled={solved}>
           Shuffle
+        </button>
+        {/* the count is on the button rather than beside it: three is the whole
+            constraint, and it should be readable at the moment you are deciding
+            whether to spend one */}
+        <button
+          className="tool"
+          onClick={askHint}
+          disabled={!target || solved}
+          title="Give away one letter in the grid"
+        >
+          Hint · {hintsLeft(state)}
         </button>
       </div>
 
