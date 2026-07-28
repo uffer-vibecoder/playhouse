@@ -22,6 +22,7 @@ const LABEL: Record<string, string> = {
   cryptogram: "Cryptogram",
   blocks: "Colour Blocks",
   freeatro: "Free-Atro",
+  blockout: "Block Out!",
 };
 
 /**

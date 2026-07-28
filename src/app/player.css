@@ -610,6 +610,76 @@ footer{
    Everything interactive drops away; the on-screen selection does too, so the
    sheet reads as a clean puzzle rather than a screenshot of one in progress.
 ── */
+/* ── block out! ──────────────────────────────────────────────────────────────
+   Eight by eight, three pieces at a time.
+
+   The four hues are the same fixed set the colour-block boards use, and for
+   the same reason: they are the game rather than the furniture. Here they carry
+   no meaning at all — nothing matches anything — so they are decoration that
+   happens to make a crowded board readable, and a colour-blind player loses
+   nothing by them.
+── */
+.bo-score{display:flex; align-items:baseline; gap:8px; margin:14px 0 12px}
+.bo-points{
+  font-family:var(--display); font-weight:600; font-size:34px; line-height:1;
+  font-variant-numeric:tabular-nums; color:var(--ink);
+}
+.bo-label{font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted)}
+.bo-streak{
+  margin-left:auto; padding:4px 10px; border-radius:999px;
+  background:var(--fill); color:#111111; font-size:11px; font-weight:700;
+}
+
+.bo-grid{
+  display:grid; grid-template-columns:repeat(8,1fr); gap:3px;
+  width:100%; max-width:var(--board); margin:0 auto;
+  padding:5px; background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+}
+.bo-cell{
+  aspect-ratio:1; margin:0; padding:0; border:1.5px solid var(--rule); border-radius:5px;
+  background:#FFFFFF; cursor:pointer;
+}
+.bo-cell.hue-1{background:#F7C9D8; border-color:var(--ink)}
+.bo-cell.hue-2{background:#CFE0C8; border-color:var(--ink)}
+.bo-cell.hue-3{background:#C7DAEE; border-color:var(--ink)}
+.bo-cell.hue-4{background:#F0DFB8; border-color:var(--ink)}
+/* where the held piece would land */
+.bo-cell.ghost{background:var(--fill-tint); border-color:var(--fill); border-style:dashed}
+.bo-cell.nogo{background:var(--tile); border-color:var(--accent-deep); border-style:dotted}
+/* and what that placement would take with it — shown before committing,
+   because there is no undo in a game that ends when you are stuck */
+.bo-cell.willclear{box-shadow:inset 0 0 0 2px var(--fill-text)}
+.bo-cell.justwent{animation:bo-went .4s ease-out both}
+@keyframes bo-went{
+  0%{transform:scale(1); background:var(--fill)}
+  100%{transform:scale(1); background:#FFFFFF}
+}
+@media (prefers-reduced-motion:reduce){ .bo-cell.justwent{animation:none} }
+
+.bo-tray{display:flex; justify-content:center; align-items:center; gap:14px; margin:16px 0 4px; min-height:86px}
+.bo-piece{
+  display:grid; place-items:center; padding:10px; margin:0; min-width:76px; min-height:76px;
+  border:2px solid var(--ink); border-radius:12px; background:#FFFFFF; cursor:pointer;
+}
+.bo-piece.on{background:var(--fill-tint); outline:2px solid var(--fill); outline-offset:2px}
+/* a spent piece leaves its gap: the three are a hand to plan around, and a row
+   that closes up is harder to read at a glance */
+.bo-piece.used{visibility:hidden}
+.bo-piece:disabled{cursor:default}
+.bo-shape{display:grid; gap:2px}
+.bo-bit{width:13px; height:13px; border-radius:3px; border:1.5px solid var(--ink)}
+.bo-bit.off{border-color:transparent; background:none}
+.bo-bit.hue-1{background:#F7C9D8}
+.bo-bit.hue-2{background:#CFE0C8}
+.bo-bit.hue-3{background:#C7DAEE}
+.bo-bit.hue-4{background:#F0DFB8}
+
+@media (max-width:560px){
+  .bo-tray{gap:8px}
+  .bo-piece{min-width:60px; min-height:60px; padding:7px}
+  .bo-bit{width:10px; height:10px}
+}
+
 /* ── free-atro ───────────────────────────────────────────────────────────────
    Freecell with a scoring layer. The cards are the fixed sheet palette rather
    than the theme's: red and black have to be told apart at a glance and that is

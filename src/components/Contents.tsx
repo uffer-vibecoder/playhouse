@@ -74,6 +74,7 @@ const ROUTE: Record<string, string> = {
   cryptogram: "/games/cryptogram",
   blocks: "/games/blocks",
   freeatro: "/games/freeatro",
+  blockout: "/games/blockout",
 };
 
 const LABEL: Record<string, string> = {
@@ -84,6 +85,7 @@ const LABEL: Record<string, string> = {
   cryptogram: "Cryptogram",
   blocks: "Colour Blocks",
   freeatro: "Free-Atro",
+  blockout: "Block Out!",
 };
 
 /**
@@ -172,11 +174,19 @@ export default function Contents() {
           blurb: "Freecell with a score on it. Every deal was won by the builder before it shipped.",
           total: freeatro.length, done: count(freeatro as FA[], fa, faSlot),
         },
+        {
+          // No count and no pips: this one is a run, not an archive. There is
+          // nothing to finish, so "3 of 60 done" would be a category error.
+          num: "08", name: "Block Out!", href: ROUTE.blockout,
+          count: "endless",
+          blurb: "Drop pieces, clear rows and columns, keep going until nothing fits.",
+          total: 0, done: 0,
+        },
         // The drafts take the next numbers rather than keeping theirs. The rule
         // is that a shipped entry never moves — nobody has navigated to a draft,
         // so nothing is being pulled out from under anyone.
-        { num: "08", name: "Word Tray", count: "in draft", blurb: "the letters are the clue", total: 0, done: 0 },
-        { num: "09", name: "Jigsaw Sudoku", count: "in draft", blurb: "the regions are the hard part", total: 0, done: 0 },
+        { num: "09", name: "Word Tray", count: "in draft", blurb: "the letters are the clue", total: 0, done: 0 },
+        { num: "10", name: "Jigsaw Sudoku", count: "in draft", blurb: "the regions are the hard part", total: 0, done: 0 },
       ]);
 
       setMark(lastUnfinished());
@@ -253,7 +263,7 @@ export default function Contents() {
                     <span className="tocbody">
                       <span className="tocname">{e.name}</span>
                       <span className="tocblurb">{e.blurb}</span>
-                      <Pips done={e.done} total={e.total} />
+                      {e.total > 0 && <Pips done={e.done} total={e.total} />}
                     </span>
                     <span className="toccol">
                       <span className="toccount">{e.count}</span>
