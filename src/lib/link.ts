@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabase, supabaseConfigured } from "./supabase/client";
+import { gameOf } from "./progress";
 
 /**
  * Linking two players, by mutual consent.
@@ -198,7 +199,7 @@ export async function backfillResults(): Promise<number> {
 
   const { data: solved } = await sb
     .from("game_progress")
-    .select("slot, game_id, updated_at")
+    .select("slot, updated_at")
     .eq("user_id", me)
     .eq("solved", true);
   if (!solved?.length) return 0;
@@ -211,7 +212,9 @@ export async function backfillResults(): Promise<number> {
     .map((r) => ({
       user_id: me,
       slot: r.slot as string,
-      game_id: r.game_id as string,
+      // derived, not copied: game_progress.game_id has wrong values in it from
+      // the merge bug, and copying them here spread the mistake to the record
+      game_id: gameOf(r.slot as string),
       completed_at: r.updated_at as string,
       elapsed_ms: null,
       summary: {},

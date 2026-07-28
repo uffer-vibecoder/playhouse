@@ -7,10 +7,9 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import Together from "@/components/Together";
 import StatShape, { Headline } from "@/components/StatShape";
 import { SITE } from "@/lib/site";
-import { fingerprint, loadGameSaves, loadSolvedSet, slotKey } from "@/lib/progress";
+import { fingerprint, loadGameSaves, loadResults, loadSolvedSet, slotKey } from "@/lib/progress";
 import {
   codewordRecord,
-  draftRecord,
   playerRecord,
   simpleRecord,
   runRecord,
@@ -27,7 +26,7 @@ import solveforx from "@/data/solveforx.json";
 import slide from "@/data/slide.json";
 import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
-import freeatro from "@/data/freeatro.json";
+import jigsaw from "@/data/jigsaw.json";
 import wordtray from "@/data/wordtray.json";
 
 /**
@@ -48,7 +47,7 @@ type CW = { id: string; theme?: string; grid: number[][]; key: string };
 type Seeded = { id: string; seed: number };
 type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
-type FA = { id: string; seed: number };
+type JS = { id: string; given: number[]; regions: number[] };
 type WT = { id: string; letters: string; w: number; h: number };
 type BL = {
   id: string;
@@ -61,7 +60,7 @@ const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answ
 const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]], String(p.seed)));
 const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
 const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
-const faSlot = (p: FA) => slotKey("freeatro", p.id, fingerprint([[p.seed]], String(p.seed)));
+const jsSlot = (p: JS) => slotKey("jigsaw", p.id, fingerprint([p.given], p.regions.join("")));
 const wtSlot = (p: WT) => slotKey("wordtray", p.id, fingerprint([[p.w, p.h]], p.letters));
 const blSlot = (p: BL) =>
   slotKey(
@@ -81,19 +80,20 @@ export default function Record() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, fa, wt, faRuns, boRuns, wgSaves, sxSaves] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, wt, js, faRuns, boRuns, wgSaves, sxSaves, results] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
         loadSolvedSet("slide"),
         loadSolvedSet("cryptogram"),
         loadSolvedSet("blocks"),
-        loadSolvedSet("freeatro"),
         loadSolvedSet("wordtray"),
+        loadSolvedSet("jigsaw"),
         loadGameSaves<Record<string, unknown>>("freeatro"),
         loadGameSaves<Record<string, unknown>>("blockout"),
         loadGameSaves<{ guesses?: string[] }>("wordgame"),
         loadGameSaves<{ firstScore?: number }>("solveforx"),
+        loadResults(),
       ]);
       if (!alive) return;
 
@@ -135,15 +135,20 @@ export default function Record() {
           (sum) => (typeof sum.placed === "number" ? `${sum.placed} pieces` : null)
         ),
         simpleRecord("wordtray", "09", "Word Tray", wordtray as WT[], wt, (p) => wtSlot(p as WT)),
-        draftRecord("sudoku", "10", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
+        simpleRecord("jigsaw", "10", "Jigsaw Sudoku", jigsaw as JS[], js, (p) => jsSlot(p as JS)),
       ]);
 
-      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + fa.size + wt.size;
-      // No times exist yet, so every finish is untimed. Passing an empty array
-      // rather than faking one keeps the average null instead of 0:00.
-      setPlayer(playerRecord(finished, []));
+      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + wt.size + js.size;
+      /* The times that were being written and never read.
+         `recordResult` has stamped `elapsed_ms` on every finish since the
+         results migration, and this page passed an empty array regardless — so
+         it has always said every solve was untimed. Only the non-null ones go
+         in: an untimed finish is not a fast one, and averaging it as zero would
+         say it was. */
+      const times = results.map((r) => r.elapsedMs).filter((ms): ms is number => ms !== null && ms > 0);
+      setPlayer(playerRecord(finished, times));
 
-      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa, ...wt]);
+      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...wt, ...js]);
       setBadges(
         stamps(
           [
@@ -153,7 +158,7 @@ export default function Record() {
             { id: "slide", name: "Sliding Tiles", puzzles: slide as Seeded[], slotOf: (p) => slSlot(p as Seeded) },
             { id: "cryptogram", name: "Cryptogram", puzzles: cryptogram as CG[], slotOf: (p) => cgSlot(p as CG) },
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
-            { id: "freeatro", name: "Free-Atro", puzzles: freeatro as FA[], slotOf: (p) => faSlot(p as FA) },
+            { id: "jigsaw", name: "Jigsaw Sudoku", puzzles: jigsaw as JS[], slotOf: (p) => jsSlot(p as JS) },
             { id: "wordtray", name: "Word Tray", puzzles: wordtray as WT[], slotOf: (p) => wtSlot(p as WT) },
           ],
           solvedAll

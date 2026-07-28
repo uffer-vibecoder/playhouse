@@ -1,6 +1,11 @@
 "use client";
 
 import { getSupabase, supabaseConfigured } from "./supabase/client";
+import { gameOf } from "./slot";
+
+/* The slot grammar lives in ./slot — pure, and therefore testable on its own.
+   Re-exported here because every game imports these from this module. */
+export { fingerprint, gameOf, isFrom, puzzleOf, slotKey } from "./slot";
 
 /**
  * Where a half-solved puzzle lives.
@@ -83,18 +88,7 @@ function ensureMigrated() {
   migrateLegacyKeys();
 }
 
-export function fingerprint(grid: number[][], key: string): string {
-  let h = 2166136261;
-  const s = grid.flat().join(",") + "|" + key;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36);
-}
 
-export const slotKey = (gameId: string, puzzleId: string, fp: string) =>
-  `${gameId}:${puzzleId}:${fp}`;
 
 /* ── local ──────────────────────────────────────────────────────────────── */
 
@@ -216,7 +210,7 @@ export async function saveProgress<T = Entries>(
  * signing in on a fresh device should not clobber real progress with an empty
  * local slate.
  */
-export async function mergeLocalIntoCloud(gameId: string): Promise<number> {
+export async function mergeLocalIntoCloud(): Promise<number> {
   if (!supabaseConfigured) return 0;
   const uid = await currentUserId();
   if (!uid) return 0;
@@ -239,11 +233,15 @@ export async function mergeLocalIntoCloud(gameId: string): Promise<number> {
     .map(({ slot, rec }) => ({
       user_id: uid,
       slot,
-      game_id: gameId,
+      // from the slot, never from the caller. This function uploads every local
+      // save there is, not one game's, so a caller-supplied id was wrong for
+      // all but one of them.
+      game_id: gameOf(slot),
       entries: rec.entries,
       solved: rec.solved,
       updated_at: rec.updatedAt,
-    }));
+    }))
+    .filter((r) => r.game_id !== "");
 
   if (!rows.length) return 0;
   const { error } = await sb.from("game_progress").upsert(rows, { onConflict: "user_id,slot" });
@@ -278,11 +276,15 @@ export async function loadGameSaves<T = unknown>(
   if (!uid) return out;
 
   const sb = getSupabase()!;
+  /* Matched on the slot rather than on `game_id`. The slot is authoritative and
+     the column is a copy — and there are copies already in the cloud that were
+     stamped with the wrong game. Reading by slot means those come back at once
+     instead of staying invisible until the puzzle is next saved. */
   const { data, error } = await sb
     .from("game_progress")
     .select("slot, entries, solved, updated_at")
     .eq("user_id", uid)
-    .eq("game_id", gameId);
+    .like("slot", `${gameId}:%`);
 
   if (error) {
     console.error("[saves] reading the record failed:", error.message, error);
@@ -339,6 +341,51 @@ export async function recordResult(
   if (error) console.error("[results] recording a finish failed:", error.message, error);
 }
 
+/** A finish, as the record table holds it. */
+export type Result = {
+  slot: string;
+  gameId: string;
+  completedAt: string;
+  elapsedMs: number | null;
+  summary: Record<string, unknown>;
+};
+
+/**
+ * Every finish this player has recorded.
+ *
+ * `recordResult` has been writing `elapsed_ms` since the results migration
+ * landed and nothing has ever read it back, so the record page has been saying
+ * every solve was untimed no matter how many were timed. This is the read.
+ *
+ * Cloud only, and that is not an oversight: a result is the thing a partner is
+ * allowed to see, and it only exists once you are signed in.
+ */
+export async function loadResults(gameId?: string): Promise<Result[]> {
+  if (!supabaseConfigured) return [];
+  const uid = await currentUserId();
+  if (!uid) return [];
+
+  const sb = getSupabase()!;
+  let q = sb
+    .from("game_results")
+    .select("slot, game_id, completed_at, elapsed_ms, summary")
+    .eq("user_id", uid);
+  if (gameId) q = q.like("slot", `${gameId}:%`); // the slot, not the copy
+
+  const { data, error } = await q;
+  if (error) {
+    console.error("[results] reading finishes failed:", error.message, error);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    slot: r.slot as string,
+    gameId: gameOf(r.slot as string),
+    completedAt: r.completed_at as string,
+    elapsedMs: typeof r.elapsed_ms === "number" ? r.elapsed_ms : null,
+    summary: (r.summary ?? {}) as Record<string, unknown>,
+  }));
+}
+
 /** Where a player left off: the most recently touched puzzle they have not finished. */
 export type Bookmark = { slot: string; gameId: string; puzzleId: string; updatedAt: string };
 
@@ -393,7 +440,7 @@ export async function loadSolvedSet(gameId: string): Promise<Set<string>> {
     .from("game_progress")
     .select("slot")
     .eq("user_id", uid)
-    .eq("game_id", gameId)
+    .like("slot", `${gameId}:%`) // the slot, not the copy — see loadGameSaves
     .eq("solved", true);
 
   for (const row of data ?? []) solved.add(row.slot as string);

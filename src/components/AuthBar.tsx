@@ -82,7 +82,7 @@ export default function AuthBar({ gameId = "codeword" }: { gameId?: string }) {
       setName(n);
       setNameDraft(n ?? "");
       if (event === "SIGNED_IN") {
-        const moved = await mergeLocalIntoCloud(gameId);
+        const moved = await mergeLocalIntoCloud();
         setStatus(
           moved ? `Signed in. ${moved} saved puzzle${moved === 1 ? "" : "s"} synced.` : "Signed in."
         );
