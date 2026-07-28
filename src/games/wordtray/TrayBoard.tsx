@@ -226,23 +226,29 @@ export default function TrayBoard({
         })}
       </div>
 
-      <div className={"wt-say" + (say ? ` ${say.kind}` : "")} role="status">
-        {say?.text ?? (word || " ")}
-      </div>
-
-      <div className="wt-tray">
-        {order.map((n) => {
+      {/* The tray as a ring, with the word forming in the middle of it.
+          A straight row of seven reads as a keyboard; a ring reads as letters
+          to play with, and it puts what you are spelling where you are already
+          looking. Each seat is rotated into place and the letter inside is
+          rotated back upright — the float animation then composes on top rather
+          than fighting the placement. */}
+      <div className="wt-ring" style={{ "--n": order.length } as React.CSSProperties}>
+        <div className={"wt-say" + (say ? ` ${say.kind}` : "")} role="status">
+          {say?.text ?? (word || "")}
+        </div>
+        {order.map((n, i) => {
           const used = state.picked.includes(n);
           return (
-            <button
-              key={n}
-              className={"wt-letter" + (used ? " used" : "")}
-              onClick={() => setState((s) => pick(s, n))}
-              disabled={used || solved}
-              aria-label={puzzle.letters[n]}
-            >
-              {puzzle.letters[n]}
-            </button>
+            <span className="wt-seat" key={n} style={{ "--i": i } as React.CSSProperties}>
+              <button
+                className={"wt-letter" + (used ? " used" : "")}
+                onClick={() => setState((s) => pick(s, n))}
+                disabled={used || solved}
+                aria-label={puzzle.letters[n]}
+              >
+                {puzzle.letters[n]}
+              </button>
+            </span>
           );
         })}
       </div>

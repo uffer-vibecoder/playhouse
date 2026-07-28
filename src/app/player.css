@@ -658,7 +658,7 @@ footer{
 .wt-letter:nth-child(5){animation-delay:-3.6s}
 .wt-letter:nth-child(6){animation-delay:-4.5s}
 .wt-letter:nth-child(7){animation-delay:-5.1s}
-@keyframes wt-float{0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)}}
+@keyframes wt-float{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
 
 /* pressed, not merely coloured */
 .wt-letter:active{transform:scale(.9); transition:transform .06s}
@@ -679,9 +679,11 @@ footer{
 
 /* what is being spelled, or what just happened to it */
 .wt-say{
-  min-height:30px; margin:4px 0 8px; text-align:center;
-  font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:3px;
-  text-transform:uppercase; color:var(--ink);
+  /* in the middle of the ring, where you are already looking */
+  position:absolute; inset:0; display:grid; place-items:center;
+  padding:0 54px; min-height:0; margin:0; text-align:center;
+  font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:2px;
+  text-transform:uppercase; color:var(--ink); overflow-wrap:anywhere;
 }
 .wt-say.found{color:var(--fill-text)}
 .wt-say.bonus{color:var(--accent-text)}
@@ -690,6 +692,19 @@ footer{
    have already found reads as a telling-off */
 .wt-say.again,.wt-say.no{color:var(--muted); font-weight:500; letter-spacing:2px}
 
+/* the ring */
+.wt-ring{
+  position:relative; margin:10px auto 14px;
+  width:min(78vw, 250px); height:min(78vw, 250px);
+}
+.wt-seat{
+  position:absolute; inset:0; display:grid; place-items:center;
+  /* out to the rim, then back upright */
+  transform:
+    rotate(calc(var(--i) * 360deg / var(--n)))
+    translateY(calc(min(78vw, 250px) / -2 + 27px))
+    rotate(calc(var(--i) * -360deg / var(--n)));
+}
 .wt-tray{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:6px 0 10px}
 .wt-letter{
   width:52px; height:52px; margin:0; padding:0;
@@ -714,7 +729,14 @@ footer{
 @media (max-width:560px){
   .wt-cell,.wt-void{min-width:0}
   .wt-cell{font-size:13px; border-width:1.5px}
-  .wt-letter{width:44px; height:44px; font-size:19px}
+  .wt-letter{width:46px; height:46px; font-size:20px}
+  .wt-seat{
+    transform:
+      rotate(calc(var(--i) * 360deg / var(--n)))
+      translateY(calc(min(78vw, 250px) / -2 + 24px))
+      rotate(calc(var(--i) * -360deg / var(--n)));
+  }
+  .wt-say{padding:0 48px; font-size:17px}
 }
 
 /* ── block out! ──────────────────────────────────────────────────────────────

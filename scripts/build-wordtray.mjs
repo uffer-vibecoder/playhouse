@@ -100,8 +100,46 @@ function canPlace(cells, word, x, y, horiz) {
 }
 
 function fill(pool, want, maxSide) {
-  const sorted = [...pool].sort((a, b) => b.length - a.length || a.localeCompare(b));
-  const first = sorted[0];
+  /**
+   * The longest word is the spine, and everything after it goes shortest first.
+   *
+   * Sorting the whole pool longest-first filled every grid with six- and
+   * seven-letter words and left the threes and fours out entirely, which made a
+   * tray far harder than it needed to be: the short words are the way in, the
+   * long one is the reward. Short words also cross more easily, so this packs
+   * better as well as reading easier.
+   */
+  const byLength = [...pool].sort((a, b) => b.length - a.length || a.localeCompare(b));
+  const first = byLength[0];
+  /**
+   * A spread of lengths, taken round-robin.
+   *
+   * Three orderings were tried before this one. Longest-first filled every grid
+   * with sixes and sevens and left the threes out entirely. Shortest-first made
+   * them nearly all threes. Sorting by distance from four made them nearly all
+   * fours, and worse, samey — one tray offered BARE, BEAR, BEAT, BETA, BORE and
+   * BRED, which is the same word six times to a solver.
+   *
+   * Cycling the buckets gives a real mix: a three, then a four, then a five,
+   * then round again. The long spine still goes first, because it is the one
+   * word the grid is built around.
+   */
+  const buckets = new Map();
+  for (const w of byLength.slice(1)) {
+    if (!buckets.has(w.length)) buckets.set(w.length, []);
+    buckets.get(w.length).push(w);
+  }
+  const lengths = [...buckets.keys()].sort((a, b) => a - b);
+  const rest = [];
+  for (let round = 0; rest.length < byLength.length - 1; round++) {
+    let took = false;
+    for (const n of lengths) {
+      const bucket = buckets.get(n);
+      if (round < bucket.length) { rest.push(bucket[round]); took = true; }
+    }
+    if (!took) break;
+  }
+  const sorted = [first, ...rest];
   const cells = new Map();
   for (let i = 0; i < first.length; i++) cells.set(key(i, 0), first[i]);
   const placed = [{ word: first, x: 0, y: 0, horiz: true }];
