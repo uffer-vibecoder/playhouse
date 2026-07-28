@@ -14,7 +14,7 @@ const GAME_ID = "jigsaw";
 const slotOf = (p: Puzzle) =>
   slotKey(GAME_ID, p.id, fingerprint([p.given], p.regions.join("")));
 
-const TIERS: Tier[] = ["gentle", "steady", "tricky"];
+const TIERS: Tier[] = ["easy", "gentle", "steady", "tricky"];
 
 export default function JigsawGame({ puzzles }: { puzzles: Puzzle[] }) {
   /**

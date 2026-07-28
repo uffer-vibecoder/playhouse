@@ -1641,3 +1641,7 @@ footer{
   .js-pad{gap:3px}
   .js-tiernote{display:none}
 }
+
+/* easy boards come with most of the page already filled in, so the badge is
+   the quietest of the four rather than another coloured pill */
+.js-tier.easy{background:var(--tile); color:var(--muted)}

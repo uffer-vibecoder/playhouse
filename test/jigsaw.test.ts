@@ -138,13 +138,28 @@ test("every board can be reasoned to the end, with no guessing", () => {
 test("the tier a board claims is the tier it measures", () => {
   for (const p of archive) {
     const { steps } = deduce(p.regions, p.given);
-    const want = steps.hidden === 0 ? "gentle" : steps.hidden <= 18 ? "steady" : "tricky";
-    assert.equal(p.tier, want, `${p.id} claims ${p.tier}, needs ${steps.hidden} hidden singles`);
+    const want =
+      steps.hidden === 0 ? (p.clues >= 34 ? "easy" : "gentle")
+      : steps.hidden <= 18 ? "steady"
+      : "tricky";
+    assert.equal(
+      p.tier, want,
+      `${p.id} claims ${p.tier}, needs ${steps.hidden} hidden singles from ${p.clues} clues`
+    );
+  }
+});
+
+test("an easy board is gentle reasoning with much more of it already filled in", () => {
+  const easy = archive.filter((p) => p.tier === "easy");
+  assert.ok(easy.length > 0, "there are some");
+  for (const p of easy) {
+    assert.ok(deduce(p.regions, p.given, ["naked"]).solved, `${p.id} is not easy`);
+    assert.ok(p.clues >= 34, `${p.id} calls itself easy with ${p.clues} clues`);
   }
 });
 
 test("a gentle board never needs the harder move", () => {
-  const gentle = archive.filter((p) => p.tier === "gentle");
+  const gentle = archive.filter((p) => p.tier === "gentle" || p.tier === "easy");
   assert.ok(gentle.length > 0, "there are some");
   for (const p of gentle) {
     assert.ok(deduce(p.regions, p.given, ["naked"]).solved, `${p.id} is not gentle`);

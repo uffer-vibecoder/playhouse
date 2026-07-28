@@ -165,10 +165,24 @@ function dig(regions, start, r, allow, floor = 0) {
  * dug as far as it will go before the chain breaks.
  */
 const TIERS = [
-  { tier: "gentle", allow: ["naked"], share: 0.3 },
-  { tier: "steady", allow: ["naked", "hidden"], share: 0.4, floor: 30 },
-  { tier: "tricky", allow: ["naked", "hidden"], share: 0.3, passes: 3 },
+  { tier: "easy", allow: ["naked"], share: 0.6, floor: [36, 42] },
+  { tier: "gentle", allow: ["naked"], share: 0.15 },
+  { tier: "steady", allow: ["naked", "hidden"], share: 0.15, floor: 26 },
+  { tier: "tricky", allow: ["naked", "hidden"], share: 0.1, passes: 3 },
 ];
+
+/*
+ * The shares lean hard on easy because the archive was already built before
+ * this tier existed: sixty boards of which none carried more than thirty
+ * clues. These are the ones that were missing.
+ *
+ * Steady stays thin whatever is done to it, and that is a fact about the
+ * puzzle rather than a bad setting. Hidden-single counts do not spread out —
+ * a board needs none of them or it needs about twenty, so the middle has to be
+ * made by stopping the dig early, and most boards stopped early simply do not
+ * need the harder move at all and are labelled gentle. Floors of 22, 24 and 26
+ * were tried; the lower two only moved boards into tricky.
+ */
 
 /**
  * The label comes from the finished board, not from the recipe that made it.
@@ -181,7 +195,18 @@ const TIERS = [
  */
 function tierOf(regions, given) {
   const { steps } = deduce(regions, given);
-  if (steps.hidden === 0) return "gentle";
+  const clues = given.reduce((n, v) => n + (v ? 1 : 0), 0);
+  /*
+   * Below gentle there had to be a band that is easy in the ordinary sense.
+   * "Gentle" already meant "never needs anything but a cell with one number
+   * left", but dug flat out that still leaves 57 squares to fill from 24
+   * clues, which is a long sit. Easy is the same reasoning with far more of
+   * the board already on the page.
+   *
+   * 34 is chosen so no board that has already shipped changes its label: the
+   * most any gentle board in the archive carries is 30 clues.
+   */
+  if (steps.hidden === 0) return clues >= 34 ? "easy" : "gentle";
   return steps.hidden <= 18 ? "steady" : "tricky";
 }
 
@@ -221,7 +246,13 @@ while (out.length - startAt < WANT && tried < WANT * 40) {
      neighbours have gone — the same dig run again over what is left. */
   let given = [...solution], clues = CELLS;
   for (let pass = 0; pass < (tier.passes ?? 1); pass++) {
-    const got = dig(regions, given, r, tier.allow, tier.floor ?? 0);
+    /* A floor may be a range. Every easy board stopping at exactly the same
+       count looked machine-made on the picker, and it is: the dig always
+       reaches its floor. Rolling the floor per board spreads them out without
+       changing what makes them easy. */
+    const f = tier.floor;
+    const floor = Array.isArray(f) ? f[0] + Math.floor(r() * (f[1] - f[0] + 1)) : (f ?? 0);
+    const got = dig(regions, given, r, tier.allow, floor);
     if (got.clues === clues) break;
     given = got.given;
     clues = got.clues;

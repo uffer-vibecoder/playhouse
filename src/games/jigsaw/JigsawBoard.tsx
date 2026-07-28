@@ -30,6 +30,7 @@ const CELLS = SIZE * SIZE;
 const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 const TIER_NOTE: Record<string, string> = {
+  easy: "Plenty on the page already. One number left in a cell, every time.",
   gentle: "Every step is a cell with one number left in it.",
   steady: "Some steps need the shape rather than the cell.",
   tricky: "Mostly the shape. Bring the pencil.",

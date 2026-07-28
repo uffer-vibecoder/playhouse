@@ -29,7 +29,7 @@
  * Boards are proved before they ship, like every other archive here.
  */
 
-export type Tier = "gentle" | "steady" | "tricky";
+export type Tier = "easy" | "gentle" | "steady" | "tricky";
 
 export type Puzzle = {
   id: string;
