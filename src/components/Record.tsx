@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthBar from "@/components/AuthBar";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
+import Together from "@/components/Together";
 import StatShape, { Headline } from "@/components/StatShape";
 import { SITE } from "@/lib/site";
 import { fingerprint, loadGameSaves, loadSolvedSet, slotKey } from "@/lib/progress";
@@ -193,6 +194,8 @@ export default function Record() {
           ))}
         </div>
       </section>
+
+      <Together />
 
       <section className="lookblock">
         <ThemeSwitcher alwaysOpen />
