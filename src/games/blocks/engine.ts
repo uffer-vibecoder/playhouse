@@ -1,12 +1,19 @@
 /**
- * Colour Blocks — coloured rectangles slide on a grid and leave through gates
- * that match them.
+ * Colour Blocks — one block is trying to get out. The rest are in the way.
  *
  * Zero imports, like every engine here: it has to run in the browser, in the
  * generator script and in the test suite, and the only way that stays true is
  * to depend on nothing.
  *
- * ── What makes this fit ─────────────────────────────────────────────────────
+ * ── What the game is ────────────────────────────────────────────────────────
+ *
+ * One marked block has an exit. Everything else is a neutral obstacle that can
+ * be shoved around and never leaves. That is the whole shape of it, and it is
+ * the correction that made this a game rather than a tidying exercise: the
+ * first version had *every* block leaving through a gate of its own colour,
+ * which is busy to look at and asks the same small question eight times.
+ *
+ * ── What makes it fit ───────────────────────────────────────────────────────
  *
  * The state is a handful of block positions, so a save stays tiny, and the
  * state space is small enough to search exhaustively — which means the
@@ -20,25 +27,14 @@
  *
  * ── Colour is never the only signal ─────────────────────────────────────────
  *
- * A game about matching colours is the obvious place to fail someone with
- * colour blindness, and the word game already set the rule here: states are
- * told apart by more than hue. So every colour carries a **shape** as well,
- * drawn on both the block and its gate. Play it in greyscale and it still
- * works — that is the test, not a preference.
+ * The one block that matters is told apart by more than its colour: it carries
+ * a mark, the obstacles carry none, and the exit is a gap in the wall rather
+ * than a coloured strip. Play it in greyscale and it still reads — that is the
+ * test, not a preference.
  */
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Edge = "top" | "bottom" | "left" | "right";
-
-/** The four families. `shape` is what makes the game legible without hue. */
-export const HUES = ["rose", "sage", "sky", "sand"] as const;
-export type Hue = (typeof HUES)[number];
-export const SHAPE: Record<Hue, string> = {
-  rose: "●",
-  sage: "▲",
-  sky: "■",
-  sand: "◆",
-};
 
 export type Block = {
   id: number;
@@ -47,22 +43,25 @@ export type Block = {
   y: number;
   w: number;
   h: number;
-  hue: Hue;
+  /** the one that is trying to leave. Exactly one block on a board has this. */
+  hero?: boolean;
 };
 
 /**
- * A doorway in the wall. `at` is where it starts along that edge and `len` how
- * many cells it spans — a block leaves only if its whole cross-section fits
- * inside, which is what stops a 3-wide block escaping through a 1-wide gap.
+ * The way out. `at` is where it starts along that edge and `len` how many cells
+ * it spans — the hero leaves only if its whole cross-section fits inside, so a
+ * three-wide block cannot squeeze through a one-wide gap.
+ *
+ * One per board. There is only one block that can use it.
  */
-export type Gate = { edge: Edge; at: number; len: number; hue: Hue };
+export type Gate = { edge: Edge; at: number; len: number };
 
 export type Puzzle = {
   id: string;
   w: number;
   h: number;
   blocks: Block[];
-  gates: Gate[];
+  gate: Gate;
   /** the shortest solution, in moves — proved by the generator, not estimated */
   par: number;
 };
@@ -70,12 +69,22 @@ export type Puzzle = {
 export type State = {
   blocks: Block[];
   moves: number;
+  /**
+   * Has the marked block actually left?
+   *
+   * Recorded rather than inferred from "no hero on the board". Those read the
+   * same on a well-formed puzzle and differently on a broken one: a board that
+   * never had a hero would otherwise be won before it started, which is how a
+   * generator that forgot to mark a block would ship sixty boards that all
+   * congratulate you on arrival.
+   */
+  freed: boolean;
   /** positions before each move, so undo is exact rather than reconstructed */
   past: Block[][];
 };
 
 /** What a save holds: where the blocks are and how many moves it took. */
-export type Saved = { blocks: Block[]; moves: number };
+export type Saved = { blocks: Block[]; moves: number; freed?: boolean };
 
 export const DIRS: Dir[] = ["up", "down", "left", "right"];
 
@@ -98,10 +107,10 @@ export function initialState(puzzle: Puzzle, restored?: Saved): State {
   const blocks = restored?.blocks?.length
     ? restored.blocks.map((b) => ({ ...b }))
     : puzzle.blocks.map((b) => ({ ...b }));
-  return { blocks, moves: restored?.moves ?? 0, past: [] };
+  return { blocks, moves: restored?.moves ?? 0, past: [], freed: restored?.freed ?? false };
 }
 
-export const toSave = (s: State): Saved => ({ blocks: s.blocks, moves: s.moves });
+export const toSave = (s: State): Saved => ({ blocks: s.blocks, moves: s.moves, freed: s.freed });
 
 const overlaps = (a: Block, b: Block) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -119,15 +128,14 @@ function insideBoard(b: Block, w: number, h: number) {
  * block cannot squeeze through a one-cell door.
  */
 export function exitsThrough(puzzle: Puzzle, b: Block, dir: Dir): boolean {
-  const edge = EDGE_OF[dir];
-  for (const g of puzzle.gates) {
-    if (g.edge !== edge || g.hue !== b.hue) continue;
-    // along the edge, the block spans [from, to)
-    const from = edge === "top" || edge === "bottom" ? b.x : b.y;
-    const to = from + (edge === "top" || edge === "bottom" ? b.w : b.h);
-    if (from >= g.at && to <= g.at + g.len) return true;
-  }
-  return false;
+  // only the marked block has anywhere to go; the rest are furniture
+  if (!b.hero) return false;
+  const g = puzzle.gate;
+  if (g.edge !== EDGE_OF[dir]) return false;
+  const across = g.edge === "top" || g.edge === "bottom";
+  const from = across ? b.x : b.y;
+  const to = from + (across ? b.w : b.h);
+  return from >= g.at && to <= g.at + g.len;
 }
 
 /** Is the block flush against the wall it would leave by? */
@@ -179,6 +187,25 @@ export function reach(puzzle: Puzzle, blocks: Block[], id: number, dir: Dir): {
  */
 export function slide(puzzle: Puzzle, s: State, id: number, dir: Dir, distance = Infinity): State {
   const { max, canExit } = reach(puzzle, s.blocks, id, dir);
+
+  /**
+   * Stepping out from where it already stands is a move in its own right.
+   *
+   * A block pressed against its own doorway has nowhere to travel, so `max` is
+   * zero and every path below used to skip it — meaning the one block that is
+   * *already at the exit* was the one block that could not use it. You had to
+   * move it away and bring it back. This was true of the old rules too and
+   * never showed, because no generated board happened to start a block flush
+   * against its gate.
+   */
+  if (canExit && max === 0) {
+    return {
+      blocks: s.blocks.filter((b) => b.id !== id),
+      moves: s.moves + 1,
+      past: [...s.past, s.blocks.map((b) => ({ ...b }))],
+      freed: true,
+    };
+  }
   if (max === 0) return s;
 
   const d = Math.min(distance, max);
@@ -192,16 +219,23 @@ export function slide(puzzle: Puzzle, s: State, id: number, dir: Dir, distance =
     ? s.blocks.filter((b) => b.id !== id)
     : s.blocks.map((b) => (b.id === id ? { ...b, x: b.x + dx * d, y: b.y + dy * d } : b));
 
-  return { blocks, moves: s.moves + 1, past };
+  return { blocks, moves: s.moves + 1, past, freed: s.freed || leaving };
 }
 
 export function undo(s: State): State {
   if (!s.past.length) return s;
-  const past = s.past.slice(0, -1);
-  return { blocks: s.past[s.past.length - 1], moves: s.moves - 1, past };
+  const blocks = s.past[s.past.length - 1];
+  return {
+    blocks,
+    moves: s.moves - 1,
+    past: s.past.slice(0, -1),
+    // stepping back to a board the hero is standing on means it has not left
+    freed: s.freed && !blocks.some((b) => b.hero),
+  };
 }
 
-export const isSolved = (s: State) => s.blocks.length === 0;
+/** Won when the marked block has left. The obstacles stay where they are. */
+export const isSolved = (s: State) => s.freed;
 
 /** Board cleared, and in no more moves than the shortest solution. */
 export const isPerfect = (puzzle: Puzzle, s: State) => isSolved(s) && s.moves <= puzzle.par;
@@ -217,22 +251,28 @@ export const isPerfect = (puzzle: Puzzle, s: State) => isSolved(s) && s.moves <=
  * the search small.
  */
 export function encode(blocks: Block[]): string {
-  // Packed into a small integer per block rather than a template string. This
-  // runs once per successor — hundreds of thousands of times in a single solve
-  // — and building strings only to sort them was most of the generator's
-  // runtime. Boards are at most 6×6 with blocks no longer than 3, so every
-  // field fits in a few bits with room to spare.
-  const n = blocks.length;
-  const packed: number[] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const b = blocks[i];
-    packed[i] = ((((HUE_INDEX[b.hue] * 4 + b.w) * 4 + b.h) * 8 + b.y) * 8 + b.x);
+  /**
+   * The hero is packed apart from the rest, because it is not interchangeable
+   * with anything: two obstacles swapping places is the same position, the hero
+   * swapping with an obstacle is not. Folding the obstacles together is most of
+   * what keeps the search small.
+   *
+   * This used to multiply by a colour index. When colour stopped being part of
+   * the game that read `undefined`, every state hashed to `NaN,NaN`, and the
+   * search decided the very first move it tried had already been seen — so it
+   * generated nothing, explored one level, and reported every board unsolvable.
+   */
+  let hero = "-";
+  const packed: number[] = [];
+  for (const b of blocks) {
+    const n = (((b.w * 4 + b.h) * 8 + b.y) * 8 + b.x);
+    if (b.hero) hero = String(n);
+    else packed.push(n);
   }
   packed.sort((a, b) => a - b);
-  return packed.join(",");
+  return hero + "/" + packed.join(",");
 }
 
-const HUE_INDEX: Record<Hue, number> = { rose: 0, sage: 1, sky: 2, sand: 3 };
 
 /**
  * Which cells are taken, as a flat grid.
@@ -307,7 +347,10 @@ function reachOn(puzzle: Puzzle, g: Uint8Array, b: Block, dir: Dir): number {
  */
 export function solve(puzzle: Puzzle, cap = 400_000): number | null {
   const start = puzzle.blocks.map((b) => ({ ...b }));
-  if (!start.length) return 0;
+  // No marked block means nothing to free. Without this the search reads the
+  // very first position as already won and reports a par of one for a board
+  // that cannot be played at all — the same trap `isSolved` had.
+  if (!start.some((b) => b.hero)) return null;
 
   let frontier: Block[][] = [start];
   const seen = new Set<string>([encode(start)]);
@@ -323,16 +366,24 @@ export function solve(puzzle: Puzzle, cap = 400_000): number | null {
       for (const b of blocks) {
         for (const dir of DIRS) {
           const max = reachOn(puzzle, g, b, dir);
-          if (!max) continue;
           const [dx, dy] = STEP[dir];
           const parked = { ...b, x: b.x + dx * max, y: b.y + dy * max };
           const canExit = atWall(puzzle, parked, dir) && exitsThrough(puzzle, parked, dir);
+          // a block already in its doorway leaves without travelling — see the
+          // note in `slide`
+          if (!max) {
+            if (canExit) return depth;
+            continue;
+          }
           for (let d = 1; d <= max; d++) {
             const leaving = canExit && d === max;
             const moved = leaving
               ? blocks.filter((o) => o.id !== b.id)
               : blocks.map((o) => (o.id === b.id ? { ...o, x: o.x + dx * d, y: o.y + dy * d } : o));
-            if (!moved.length) return depth;
+            // won when the marked block has left, not when the board is bare.
+            // This read `!moved.length` under the old every-block-escapes rule,
+            // and left that way the search can never succeed at all.
+            if (!moved.some((o) => o.hero)) return depth;
             const key = encode(moved);
             if (seen.has(key)) continue;
             seen.add(key);

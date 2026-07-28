@@ -1027,6 +1027,290 @@ footer{
 }
 
 /* ── colour blocks ───────────────────────────────────────────────────────────
+   One block is trying to get out; the rest are in the way.
+
+   The hero is told apart by more than colour — it is filled, marked, and
+   outlined heavier, while the obstacles are flat and quiet. In greyscale the
+   board still says which block matters, which is the test rather than a
+   preference. The way out is a gap in the wall rather than a coloured strip,
+   for the same reason.
+── */
+.cb-wrap{position:relative; margin:16px 0 10px; padding:16px 0}
+.cb-board{
+  container-type:inline-size;
+  position:relative; width:100%; max-width:var(--board); margin:0 auto;
+  background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+}
+.cb-cells{position:absolute; inset:0; display:grid; opacity:.55}
+.cb-cell{border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); box-sizing:border-box}
+
+.cb-block{
+  position:absolute; margin:0; padding:0; cursor:grab; z-index:2;
+  display:grid; place-items:center;
+  border:2px solid var(--ink); border-radius:9px;
+  background:#FFFFFF;
+  /* the cell is the unit, so the gap comes out of the block rather than out of
+     the grid — otherwise a three-long block is not three cells long */
+  transform:scale(.94);
+  transition:left .16s cubic-bezier(.2,.8,.3,1), top .16s cubic-bezier(.2,.8,.3,1);
+  touch-action:none;   /* the drag is ours, not the page's */
+}
+.cb-block:active{cursor:grabbing}
+.cb-block.on{outline:2.5px solid var(--ink); outline-offset:2px}
+.cb-block:focus-visible{outline:2.5px solid var(--accent-deep); outline-offset:2px}
+
+/* the one that matters */
+.cb-block.hero{background:#F7C9D8; border-width:3px}
+.cb-mark{font-size:clamp(11px, 4cqw, 20px); line-height:1; color:var(--ink)}
+
+/* The way out is a gap: the wall stops and the board shows through, which reads
+   as somewhere to leave by rather than as another coloured thing to match. */
+/* The exit takes the hero's fill and an arrow pointing out: which block it is
+   for, and which way it goes, without depending on either signal alone. */
+.cb-gate{
+  position:absolute; z-index:3; display:grid; place-items:center;
+  background:#F7C9D8; border:2px solid var(--ink);
+}
+.cb-out{font-size:clamp(9px, 2.6cqw, 13px); line-height:1; color:var(--ink)}
+.cb-top{top:-13px; height:13px; border-bottom:0; border-radius:6px 6px 0 0}
+.cb-bottom{bottom:-13px; height:13px; border-top:0; border-radius:0 0 6px 6px}
+.cb-left{left:-13px; width:13px; border-right:0; border-radius:6px 0 0 6px}
+.cb-right{right:-13px; width:13px; border-left:0; border-radius:0 6px 6px 0}
+
+/* the keyboard and screen-reader path — the drag is the nice way, not the only one */
+.cb-nudge{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-top:12px}
+.cb-nudgelabel{font-size:11px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted)}
+.cb-nudge .tool{text-transform:capitalize; flex:0 0 auto; min-width:0}
+
+@media (max-width:560px){
+  .cb-top,.cb-bottom{height:10px}
+  .cb-top{top:-10px}
+  .cb-bottom{bottom:-10px}
+  .cb-left,.cb-right{width:10px}
+  .cb-left{left:-10px}
+  .cb-right{right:-10px}
+}
+
+/* ── free-atro ───────────────────────────────────────────────────────────────
+   Freecell with a scoring layer. The cards are the fixed sheet palette rather
+   than the theme's: red and black have to be told apart at a glance and that is
+   a rule of the game, not a decoration.
+
+   Columns overlap so a twelve-card pile still fits a phone. Only the rank and
+   suit of a covered card show, which is all you need to read a tableau.
+── */
+.fa-score{
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:8px;
+  margin:14px 0 10px; padding:10px 14px;
+  border:2px solid var(--ink); border-radius:12px; background:var(--fill-tint);
+}
+.fa-chips,.fa-mult{
+  font-family:var(--display); font-weight:600; font-size:22px;
+  font-variant-numeric:tabular-nums; color:#111111;
+}
+.fa-times{font-size:15px; color:#4A4A4A}
+.fa-total{margin-left:auto; display:flex; align-items:baseline; gap:6px; color:#111111}
+.fa-total b{font-family:var(--display); font-size:24px; font-variant-numeric:tabular-nums}
+.fa-total span{font-size:11px; color:#4A4A4A}
+.fa-bar{flex:0 0 100%; height:5px; border-radius:99px; background:#FFFFFF; overflow:hidden}
+.fa-bar span{display:block; height:100%; background:var(--fill); transition:width .3s ease-out}
+
+.fa-top{display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-bottom:14px}
+.fa-cells,.fa-foundations{display:flex; gap:6px}
+.fa-slot{
+  width:46px; height:62px; padding:0; display:grid; place-items:center;
+  border:2px dashed var(--underline); border-radius:8px; background:#FFFFFF; cursor:pointer;
+}
+.fa-slot.on{border-style:solid; border-color:var(--ink); outline:2px solid var(--fill)}
+.fa-home{border-style:solid; border-color:var(--rule)}
+.fa-empty{font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted)}
+.fa-empty.red{color:#B03A6E; font-size:18px}
+
+.fa-table{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; align-items:start}
+.fa-col{
+  min-height:74px; padding:4px; margin:0; display:flex; flex-direction:column;
+  border:1.5px solid transparent; border-radius:10px; background:none; cursor:pointer;
+}
+.fa-col.on{border-color:var(--ink); background:var(--fill-tint)}
+.fa-gap{
+  display:block; height:62px; border:2px dashed var(--underline); border-radius:8px;
+}
+/* the overlap: a covered card shows only its corner */
+.fa-slide{display:block; margin-top:-40px}
+.fa-slide:first-child{margin-top:0}
+.fa-slide.lift{transform:translateX(8px)}
+/* a card you can pick up from says so on hover; the ones buried under a broken
+   run stay inert, which is the quickest way to read what a column will give */
+.fa-slide.takeable{cursor:pointer}
+.fa-slide.takeable:hover .fa-card{border-color:var(--fill-text)}
+.fa-slide.takeable:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px; border-radius:8px}
+.fa-slide.inrun .fa-card{box-shadow:-2px 0 0 var(--fill)}
+
+.fa-card{
+  display:flex; align-items:center; gap:2px; height:62px; padding:4px 5px;
+  border:1.5px solid var(--ink); border-radius:8px; background:#FFFFFF;
+  align-items:flex-start; justify-content:flex-start;
+  font-family:var(--display); font-weight:600; font-size:15px; line-height:1; color:#111111;
+}
+.fa-card.red{color:#B03A6E}
+.fa-rank{font-variant-numeric:tabular-nums}
+.fa-suit{font-size:13px}
+
+.fa-shop{margin-top:0}
+/* the one button that appears only when the game is already decided */
+.fa-finish{border-color:var(--fill-text); color:var(--fill-text)}
+.fa-finish:hover{background:var(--fill-tint)}
+/* `.strapline` capitalises every word, which is right for a two-word game
+   strapline and wrong for "697 against 240" */
+.fa-versus{font-size:11px; letter-spacing:2.4px; color:var(--muted)}
+.fa-sofar{display:flex; align-items:baseline; gap:10px; margin:0 0 14px; font-size:12px}
+.fa-sofarhead{font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted)}
+.fa-sofarlist{color:var(--body); font-variant-numeric:tabular-nums}
+.fa-purse{
+  display:flex; align-items:baseline; gap:8px; margin:12px 0;
+  padding:12px 16px; border:2px solid var(--ink); border-radius:12px; background:var(--fill-tint);
+}
+.fa-purse b{font-family:var(--display); font-size:28px; color:#111111}
+.fa-purse span{font-size:12px; color:#4A4A4A}
+
+.fa-wares{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px}
+.fa-ware{
+  display:grid; gap:5px; justify-items:start; text-align:left; padding:14px;
+  border:2px solid var(--ink); border-radius:12px; background:#FFFFFF; cursor:pointer;
+}
+.fa-ware:hover:not(:disabled){background:var(--fill-tint)}
+/* an upgrade you cannot afford stays legible: it is information about what to
+   aim for, not a thing to be hidden away */
+.fa-ware:disabled{cursor:default; border-color:var(--underline); background:var(--tile)}
+.fa-warename{font-family:var(--display); font-weight:600; font-size:16px; color:var(--ink)}
+.fa-warenote{font-size:11px; line-height:1.45; color:var(--body)}
+.fa-warecost{
+  margin-top:2px; font-size:10px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--muted);
+}
+
+@media (max-width:560px){
+  .fa-wares{grid-template-columns:1fr}
+  .fa-table{gap:3px}
+  .fa-card{height:54px; font-size:12px; padding:3px 3px}
+  .fa-suit{font-size:10px}
+  .fa-slide{margin-top:-36px}
+  .fa-slot{width:38px; height:54px}
+  .fa-gap{height:54px}
+}
+
+/* ── together ────────────────────────────────────────────────────────────────
+   Two people and a code. No list, no search, no suggestions — everything that
+   would make this a social network is absent on purpose, and the layout should
+   look like it was never considered.
+── */
+.togetherblock{margin-top:26px; padding-top:18px; border-top:3px solid var(--shell-rule)}
+.linkrow{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:14px}
+.linkhalf{display:grid; align-content:start; gap:8px; justify-items:start}
+.linkhead{
+  margin:0; font-size:10px; font-weight:700; letter-spacing:1.6px;
+  text-transform:uppercase; color:var(--shell-muted);
+}
+.linkactions{display:flex; gap:8px}
+
+/* The code is the whole point of the panel, so it is set like something to be
+   read out rather than like a form value. Tabular figures because 0 and 8 are
+   what get misheard. */
+.invitecode{
+  display:block; padding:10px 14px;
+  border:2px solid var(--fill); border-radius:10px; background:var(--fill-tint);
+  font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:2px;
+  font-variant-numeric:tabular-nums; color:#111111;
+}
+.codefield{
+  width:100%; max-width:220px; padding:9px 12px;
+  border:1.5px solid var(--shell-rule); border-radius:9px; background:var(--paper);
+  font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--ink);
+}
+.codefield:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px}
+
+.linked{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  gap:12px; margin-top:14px; padding:14px 16px;
+  border:1.5px solid var(--fill); border-radius:12px; background:var(--fill-tint);
+}
+/* on --fill-tint, so the fixed ink rather than the shell's */
+.linked .linkname{display:block; font-family:var(--display); font-size:18px; color:#111111}
+.linked .recsub{color:#4A4A4A}
+.linknote{margin:12px 0 0; font-size:12px; color:var(--shell-body)}
+
+.theirs{margin-top:14px; display:grid; gap:10px}
+.theirscounts{display:flex; flex-wrap:wrap; gap:8px}
+.theirscount{
+  padding:5px 10px; border:1.5px solid var(--shell-rule); border-radius:999px;
+  font-size:11px; color:var(--shell-body);
+}
+.theirscount b{font-family:var(--display); font-size:14px; color:var(--shell-ink)}
+.theirslist{list-style:none; margin:0; padding:0; display:grid; gap:0}
+.theirslist li{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:8px 2px; border-bottom:1.5px solid var(--shell-rule);
+  font-size:12px; color:var(--shell-ink);
+}
+
+@media (max-width:560px){
+  .linkrow{grid-template-columns:1fr; gap:22px}
+}
+
+/* ── the harder tiers: stacked fractions, scratch paper, a calculator ────────
+   A fraction set inline — `(20 + v)/15` — stops reading as division and starts
+   reading as a typo, so the hard tier stacks it: numerator, rule, denominator,
+   in a flex column sized to sit on the equation's baseline. That is CSS rather
+   than a maths library, and it has to hold up at the phone type sizes, which is
+   what the 375px rules at the bottom are for.
+── */
+.sx-frac{
+  display:inline-flex; flex-direction:column; align-items:center;
+  vertical-align:middle; margin:0 3px; line-height:1.05;
+}
+.sx-over{padding:0 3px; font-size:.66em}
+.sx-under{padding:0 3px; font-size:.66em; border-top:1.5px solid currentColor}
+
+.sx-scratch{margin:4px 0 6px; border:1.5px solid var(--rule); border-radius:12px; overflow:hidden}
+.sx-scratchnote{
+  margin-left:auto; align-self:center;
+  font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted);
+}
+.sx-canvas{
+  display:block; width:100%; height:190px; background:#FFFFFF;
+  cursor:crosshair; touch-action:none;   /* the stroke is ours, not the page's scroll */
+}
+.sx-scratchtools{display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; background:var(--tile)}
+/* `.tool` is `flex:1; min-width:110px` — built for a row of equal buttons at
+   the foot of a sheet. In this little bar that makes three of them fight for
+   342px, and with nowrap the label overflows its own pill instead. Here they
+   size to their text and the row wraps if it must. */
+.sx-scratchtools .tool{flex:0 0 auto; min-width:0; white-space:nowrap}
+
+.sx-calc{display:grid; gap:8px; max-width:280px; margin:4px auto 0}
+.sx-calcshow{
+  display:block; padding:10px 12px; text-align:right;
+  border:1.5px solid var(--ink); border-radius:8px; background:#FFFFFF;
+  font-family:var(--display); font-weight:600; font-size:22px;
+  font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis;
+}
+.sx-calcpad{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.sx-calcpad .key{height:42px; font-size:17px}
+.sx-calcpad .key[aria-pressed="true"]{background:var(--fill-tint); border-color:var(--fill)}
+.sx-calcwide{grid-column:span 2}
+.sx-calcnote{margin:0; font-size:10px; line-height:1.5; color:var(--muted); text-align:center}
+
+@media (max-width:560px){
+  /* Taller on a phone, not shorter. The instinct is to shrink everything, but
+     this is the one element whose whole value is room to write, and a phone is
+     where the working is most cramped. */
+  .sx-canvas{height:300px}
+  /* fractions are the first thing to break as the type shrinks */
+  .sx-over,.sx-under{font-size:.6em; padding:0 2px}
+}
+
+/* ── colour blocks ───────────────────────────────────────────────────────────
    Blocks slide out through gates that match them.
 
    Colour is never the only signal. Every hue carries a shape as well, drawn on

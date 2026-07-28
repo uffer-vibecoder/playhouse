@@ -17,7 +17,7 @@ const slotOf = (p: Puzzle) =>
     p.id,
     fingerprint(
       p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-      p.gates.map((g) => `${g.edge}${g.at}${g.len}${g.hue}`).join("|")
+      `${p.gate.edge}${p.gate.at}${p.gate.len}`
     )
   );
 
@@ -100,7 +100,7 @@ export default function BlocksGame({ puzzles }: { puzzles: Puzzle[] }) {
                     setIndex(i);
                     setPickerOpen(false);
                   }}
-                  title={`${p.blocks.length} blocks, par ${p.par}`}
+                  title={`${p.blocks.length - 1} in the way, out in ${p.par}`}
                 >
                   {p.id.replace("CB-", "NO. ")}
                   {solved.has(slotOf(p)) ? " ✓" : ""}

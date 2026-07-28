@@ -50,7 +50,11 @@ type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
 type FA = { id: string; seed: number };
 type WT = { id: string; letters: string; w: number; h: number };
-type BL = { id: string; blocks: { x: number; y: number; w: number; h: number }[]; gates: { edge: string; at: number; len: number; hue: string }[] };
+type BL = {
+  id: string;
+  blocks: { x: number; y: number; w: number; h: number }[];
+  gate: { edge: string; at: number; len: number };
+};
 
 const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
 const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answer));
@@ -65,7 +69,7 @@ const blSlot = (p: BL) =>
     p.id,
     fingerprint(
       p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-      p.gates.map((g) => `${g.edge}${g.at}${g.len}${g.hue}`).join("|")
+      `${p.gate.edge}${p.gate.at}${p.gate.len}`
     )
   );
 

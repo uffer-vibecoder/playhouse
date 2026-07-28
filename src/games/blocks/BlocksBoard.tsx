@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Mark from "@/components/Mark";
 import {
   DIRS,
-  SHAPE,
   initialState,
   isSolved,
   reach,
@@ -51,7 +50,7 @@ export default function BlocksBoard({
         puzzle.id,
         fingerprint(
           puzzle.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-          puzzle.gates.map((g) => `${g.edge}${g.at}${g.len}${g.hue}`).join("|")
+          `${puzzle.gate.edge}${puzzle.gate.at}${puzzle.gate.len}`
         )
       ),
     [puzzle]
@@ -157,7 +156,7 @@ export default function BlocksBoard({
     window.addEventListener("pointerup", finish);
   };
 
-  const cleared = puzzle.blocks.length - state.blocks.length;
+  const inTheWay = state.blocks.filter((b) => !b.hero).length;
   const step = (n: number, of: number) => `${(n / of) * 100}%`;
 
   /** Where a block can go from here, so the arrows only offer real moves. */
@@ -170,7 +169,7 @@ export default function BlocksBoard({
         <div>
           <h1>Colour Blocks</h1>
           <div className="titlerow">
-            <span className="strapline">Slide them out through their own gates</span>
+            <span className="strapline">One block is trying to get out</span>
             <span className="pill-num">{puzzle.id.replace("CB-", "NO. ")}</span>
           </div>
         </div>
@@ -186,14 +185,14 @@ export default function BlocksBoard({
         </summary>
         <div className="disclosure-body">
           <p className="intro">
-            Every block leaves through a gate of its own colour, and the gate has to be wide
-            enough to take it. Drag a block to slide it — a nudge moves it one square, a longer
+            One block is trying to get out — the marked one. Everything else is in the way and
+            stays on the board. Drag a block to slide it: a nudge moves it one square, a longer
             pull sends it as far as it will go. Or tap it and use the arrow keys.
           </p>
           <p className="intro">
-            Each colour carries a shape as well, on the block and on its gate, so nothing here
-            depends on telling one colour from another. Clear the board to finish; clear it in{" "}
-            <b>{puzzle.par}</b> moves and you have found the shortest way through.
+            The way out only takes the marked block, and only if the whole of it fits through.
+            Get it out to finish; get it out in <b>{puzzle.par}</b> moves and you have found the
+            shortest way.
           </p>
         </div>
       </details>
@@ -220,29 +219,33 @@ export default function BlocksBoard({
             ))}
           </div>
 
-          {puzzle.gates.map((g, i) => {
-            const along = g.edge === "top" || g.edge === "bottom" ? puzzle.w : puzzle.h;
+          {(() => {
+            const g = puzzle.gate;
             const across = g.edge === "top" || g.edge === "bottom";
+            const along = across ? puzzle.w : puzzle.h;
             return (
               <span
-                key={i}
-                className={`cb-gate cb-${g.edge} hue-${g.hue}`}
+                className={`cb-gate cb-${g.edge}`}
                 style={
                   across
                     ? { left: step(g.at, along), width: step(g.len, along) }
                     : { top: step(g.at, along), height: step(g.len, along) }
                 }
-                aria-label={`${g.hue} gate, ${g.len} wide`}
+                aria-label={`the way out, ${g.len} wide, on the ${g.edge}`}
               >
-                <span className="cb-glyph">{SHAPE[g.hue]}</span>
+                {/* an arrow pointing out, so the exit is not told apart by
+                    colour alone — it says which way, too */}
+                <span className="cb-out" aria-hidden="true">
+                  {g.edge === "top" ? "↑" : g.edge === "bottom" ? "↓" : g.edge === "left" ? "←" : "→"}
+                </span>
               </span>
             );
-          })}
+          })()}
 
           {state.blocks.map((b) => (
             <button
               key={b.id}
-              className={`cb-block hue-${b.hue}${picked === b.id ? " on" : ""}`}
+              className={`cb-block${b.hero ? " hero" : ""}${picked === b.id ? " on" : ""}`}
               style={{
                 left: step(b.x, puzzle.w),
                 top: step(b.y, puzzle.h),
@@ -251,10 +254,14 @@ export default function BlocksBoard({
               }}
               onPointerDown={(e) => onPointerDown(e, b.id)}
               onClick={() => setPicked(b.id)}
-              aria-label={`${b.hue} block, ${b.w} by ${b.h}, at column ${b.x + 1} row ${b.y + 1}`}
+              aria-label={`${b.hero ? "the block trying to get out" : "a block in the way"}, ${
+                b.w
+              } by ${b.h}, at column ${b.x + 1} row ${b.y + 1}`}
               aria-pressed={picked === b.id}
             >
-              <span className="cb-glyph">{SHAPE[b.hue]}</span>
+              {/* the mark, so the one that matters is not told apart by colour
+                  alone — it reads in greyscale, which is the test */}
+              {b.hero && <span className="cb-mark" aria-hidden="true">◆</span>}
             </button>
           ))}
         </div>
@@ -278,7 +285,7 @@ export default function BlocksBoard({
 
       <div className="status">
         <span>
-          {cleared} of {puzzle.blocks.length} cleared
+          {solved ? "out" : `${inTheWay} in the way`}
         </span>
         <span>
           {state.moves} move{state.moves === 1 ? "" : "s"} · par {puzzle.par}
@@ -288,8 +295,8 @@ export default function BlocksBoard({
       {solved && (
         <div className="win">
           {state.moves <= puzzle.par
-            ? `Cleared in ${state.moves} — that is the shortest way through.`
-            : `Cleared in ${state.moves}. The shortest way is ${puzzle.par}.`}
+            ? `Out in ${state.moves} — that is the shortest way there is.`
+            : `Out in ${state.moves}. The shortest way is ${puzzle.par}.`}
         </div>
       )}
 
@@ -311,7 +318,7 @@ export default function BlocksBoard({
       </div>
 
       <footer>
-        <span>Colour Blocks · every board can be cleared</span>
+        <span>Colour Blocks · every board has a way out</span>
         <span>{saved?.where === "cloud" ? "Saved to your account" : "Saved on this device"}</span>
       </footer>
     </div>

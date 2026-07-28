@@ -3,7 +3,8 @@
  *
  *   node scripts/build-blocks.mjs [count]
  *
- * Every board that ships has been **solved before it shipped**. The generator
+ * One block is trying to get out; the rest are in the way. Every board that
+ * ships has been **solved before it shipped**. The generator
  * places blocks and gates at random, runs the engine's breadth-first search,
  * and keeps the board only if the search comes back with a shortest solution
  * inside the difficulty band. A board that cannot be finished, or one that
@@ -19,7 +20,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { HUES, solve } from "../src/games/blocks/engine.ts";
+import { solve } from "../src/games/blocks/engine.ts";
 
 const OUT = "src/data/blocks.json";
 const WANT = Number(process.argv[2] ?? 60);
@@ -34,10 +35,17 @@ const WANT = Number(process.argv[2] ?? 60);
  * hangs the generator is worse.
  */
 const TIERS = [
-  { w: 4, h: 4, blocks: [3, 4], par: [4, 9], cap: 120_000, share: 0.25 },
-  { w: 5, h: 5, blocks: [4, 6], par: [6, 14], cap: 300_000, share: 0.4 },
-  { w: 6, h: 6, blocks: [4, 5], par: [8, 18], cap: 400_000, share: 0.35 },
+  { w: 4, h: 4, blocks: [4, 5], par: [6, 12], cap: 120_000, share: 0.25 },
+  { w: 5, h: 5, blocks: [5, 7], par: [8, 16], cap: 300_000, share: 0.4 },
+  { w: 6, h: 6, blocks: [5, 7], par: [10, 22], cap: 400_000, share: 0.35 },
 ];
+
+/*
+ * The bands lifted once the rule became a single escape. Getting one block out
+ * is a much smaller ask than clearing every block, and the first run under the
+ * new rule threw away 584 boards of 801 as too easy while still landing 23 of
+ * its 60 at the very bottom of the range. More obstacles and a higher floor.
+ */
 
 /*
  * The first run of this had 5–8 blocks on the 6×6 board and produced none at
@@ -81,6 +89,27 @@ function tryBoard(r, tier) {
   const grid = Array.from({ length: h }, () => Array(w).fill(false));
   const blocks = [];
 
+  /* The hero first, so it is never squeezed into whatever gap is left. It is
+     placed away from its own wall — a block that starts in the doorway is not a
+     puzzle. */
+  const edge = pick(r, ["top", "bottom", "left", "right"]);
+  const [hw, hh] = pick(r, [[1, 1], [2, 1], [1, 2]]);
+  const hx = between(r, 0, w - hw);
+  const hy = between(r, 0, h - hh);
+  for (let j = hy; j < hy + hh; j++) for (let i = hx; i < hx + hw; i++) grid[j][i] = true;
+  blocks.push({ id: 0, x: hx, y: hy, w: hw, h: hh, hero: true });
+
+  // the way out, wide enough for the hero and lined up somewhere it could reach
+  const along = edge === "top" || edge === "bottom" ? w : h;
+  const span = edge === "top" || edge === "bottom" ? hw : hh;
+  const gate = { edge, at: between(r, 0, along - span), len: span };
+
+  // and it must not start already at the door
+  const atDoor =
+    (edge === "top" && hy === 0) || (edge === "bottom" && hy + hh === h) ||
+    (edge === "left" && hx === 0) || (edge === "right" && hx + hw === w);
+  if (atDoor) return null;
+
   for (let attempt = 0; attempt < 200 && blocks.length < want; attempt++) {
     const [bw, bh] = pick(r, SHAPES);
     if (bw > w || bh > h) continue;
@@ -93,42 +122,11 @@ function tryBoard(r, tier) {
     if (!free) continue;
 
     for (let j = y; j < y + bh; j++) for (let i = x; i < x + bw; i++) grid[j][i] = true;
-    blocks.push({ id: blocks.length, x, y, w: bw, h: bh, hue: pick(r, HUES) });
+    blocks.push({ id: blocks.length, x, y, w: bw, h: bh });
   }
   if (blocks.length < tier.blocks[0]) return null;
 
-  // Every colour present needs at least one gate it fits through, or the board
-  // is unsolvable for a boring reason rather than an interesting one.
-  // Gates must not overlap one another. Two gates sharing a cell means that
-  // cell is two colours at once — the board draws one over the other, and a
-  // player cannot see which way out they are looking at. The first version of
-  // this placed each hue's gates independently and produced 80 overlapping
-  // pairs across 60 boards, which is what sent it back here.
-  const gates = [];
-  const taken = { top: [], bottom: [], left: [], right: [] };
-  const clashes = (edge, at, len) =>
-    taken[edge].some(([a, l]) => at < a + l && a < at + len);
-
-  const used = [...new Set(blocks.map((b) => b.hue))];
-  for (const hue of used) {
-    const widest = Math.max(...blocks.filter((b) => b.hue === hue).map((b) => Math.max(b.w, b.h)));
-    const want = between(r, 1, 2);
-    let placed = 0;
-    for (let attempt = 0; attempt < 40 && placed < want; attempt++) {
-      const edge = pick(r, ["top", "bottom", "left", "right"]);
-      const along = edge === "top" || edge === "bottom" ? w : h;
-      const len = Math.min(along, between(r, widest, widest + 1));
-      const at = between(r, 0, along - len);
-      if (clashes(edge, at, len)) continue;
-      taken[edge].push([at, len]);
-      gates.push({ edge, at, len, hue });
-      placed++;
-    }
-    // A colour with nowhere to go is not a hard puzzle, it is a broken one.
-    if (!placed) return null;
-  }
-
-  return { w, h, blocks, gates, par: 0 };
+  return { w, h, blocks, gate, par: 0 };
 }
 
 /* ── build ────────────────────────────────────────────────────────────────── */
