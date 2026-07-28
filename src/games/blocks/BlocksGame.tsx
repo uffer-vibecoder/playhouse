@@ -6,20 +6,14 @@ import { useSearchParams } from "next/navigation";
 import BlocksBoard from "./BlocksBoard";
 import type { Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { blocksSlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "blocks";
 
 const slotOf = (p: Puzzle) =>
-  slotKey(
-    GAME_ID,
-    p.id,
-    fingerprint(
-      p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-      `${p.gate.edge}${p.gate.at}${p.gate.len}`
-    )
-  );
+  blocksSlot(p);
 
 export default function BlocksGame({ puzzles }: { puzzles: Puzzle[] }) {
   /**

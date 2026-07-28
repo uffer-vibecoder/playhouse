@@ -24,7 +24,8 @@ import {
   type Puzzle,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { codewordSlot } from "@/lib/slots";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
@@ -51,7 +52,7 @@ export default function CodewordBoard({
   const solvedOnce = useRef(false);
 
   const slot = useMemo(
-    () => slotKey(GAME_ID, puzzle.id, fingerprint(puzzle.grid, puzzle.key)),
+    () => codewordSlot(puzzle),
     [puzzle]
   );
 

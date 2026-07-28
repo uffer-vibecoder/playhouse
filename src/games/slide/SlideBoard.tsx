@@ -18,7 +18,8 @@ import {
   type State,
   type Tiles,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { slideSlot } from "@/lib/slots";
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
 import { useTimer } from "@/lib/use-timer";
@@ -78,7 +79,7 @@ export default function SlideBoard({
   const solvedOnce = useRef(false);
 
   const slot = useMemo(
-    () => slotKey(GAME_ID, puzzle.id, fingerprint([[puzzle.seed]], String(puzzle.seed))),
+    () => slideSlot(puzzle),
     [puzzle]
   );
   const timer = useTimer(slot);

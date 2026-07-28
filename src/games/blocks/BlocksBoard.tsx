@@ -16,7 +16,8 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { blocksSlot } from "@/lib/slots";
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
 import { useTimer } from "@/lib/use-timer";
@@ -45,14 +46,7 @@ export default function BlocksBoard({
 
   const slot = useMemo(
     () =>
-      slotKey(
-        GAME_ID,
-        puzzle.id,
-        fingerprint(
-          puzzle.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-          `${puzzle.gate.edge}${puzzle.gate.at}${puzzle.gate.len}`
-        )
-      ),
+      blocksSlot(puzzle),
     [puzzle]
   );
   const timer = useTimer(slot);

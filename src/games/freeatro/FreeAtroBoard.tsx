@@ -26,7 +26,8 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { freeatroSlot } from "@/lib/slots";
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
 import { useTimer } from "@/lib/use-timer";
@@ -55,7 +56,7 @@ export default function FreeAtroBoard({
   // the round is part of the slot: the same deal at round four is a different
   // problem from the same deal at round one, because the target has moved
   const slot = useMemo(
-    () => slotKey(GAME_ID, `${deal.id}-r${run.round}`, fingerprint([[deal.seed]], String(deal.seed))),
+    () => freeatroSlot(deal, run.round),
     [deal, run.round]
   );
   const timer = useTimer(slot);

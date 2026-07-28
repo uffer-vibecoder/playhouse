@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import WordBoard from "./WordBoard";
-import { LENGTH, TRIES, type Puzzle } from "./engine";
+import { type Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { wordgameSlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "wordgame";
@@ -64,7 +65,7 @@ export default function WordGame({ puzzles }: { puzzles: Puzzle[] }) {
   );
 
   const slotOf = (p: Puzzle) =>
-    slotKey(GAME_ID, p.id, fingerprint([[LENGTH, TRIES]], p.answer));
+    wordgameSlot(p);
   const doneCount = puzzles.filter((p) => solved.has(slotOf(p))).length;
 
   return (

@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import SolveBoard from "./SolveBoard";
 import type { Puzzle, Tier } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { solveforxSlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "solveforx";
@@ -84,7 +85,7 @@ export default function SolveGame({ puzzles }: { puzzles: Puzzle[] }) {
   }, [puzzles, matches, setIndex]);
 
   const slotOf = (p: Puzzle) =>
-    slotKey(GAME_ID, p.id, fingerprint([[p.seed]], String(p.seed)));
+    solveforxSlot(p);
   const doneCount = puzzles.filter((p) => solved.has(slotOf(p))).length;
 
   return (

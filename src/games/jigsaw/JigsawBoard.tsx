@@ -7,10 +7,13 @@ import {
   colOf,
   conflicts,
   erase,
+  hint,
+  hintsLeft,
   initialState,
   isGiven,
   isSolved,
   note,
+  nextStep,
   notesIn,
   progress,
   rowOf,
@@ -20,7 +23,8 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { jigsawSlot } from "@/lib/slots";
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
 import { useTimer } from "@/lib/use-timer";
@@ -50,11 +54,13 @@ export default function JigsawBoard({
   const [at, setAt] = useState<number | null>(null);
   const [pencil, setPencil] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  /** what the last hint said, so the board can answer rather than just act */
+  const [said, setSaid] = useState<string | null>(null);
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const solvedOnce = useRef(false);
 
   const slot = useMemo(
-    () => slotKey(GAME_ID, puzzle.id, fingerprint([puzzle.given], puzzle.regions.join(""))),
+    () => jigsawSlot(puzzle),
     [puzzle]
   );
   const timer = useTimer(slot);
@@ -96,7 +102,7 @@ export default function JigsawBoard({
       void recordResult(slot, GAME_ID, { clues: puzzle.clues, tier: puzzle.tier }, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, puzzle.clues, puzzle.tier, stopTimer, elapsed]);
+  }, [solved, restoring, onSolved, slot, puzzle.clues, puzzle.tier, state.shown.length, stopTimer, elapsed]);
 
   const bad = useMemo(() => conflicts(puzzle, state), [puzzle, state]);
   const { done, total } = progress(puzzle, state);
@@ -127,6 +133,35 @@ export default function JigsawBoard({
     },
     [at, pencil, puzzle, solved]
   );
+
+  const step = nextStep(puzzle, state);
+  const askHint = useCallback(() => {
+    const now = nextStep(puzzle, state);
+    if (now.kind === "mistake") {
+      // which square is wrong is not given away — knowing that something is
+      // wrong is a hint, knowing exactly what is the answer
+      setSaid(
+        now.count === 1
+          ? "Something already written is wrong."
+          : `${now.count} of the numbers already written are wrong.`
+      );
+      return;
+    }
+    if (now.kind !== "cell") return;
+    setAt(now.cell);
+    setSaid(
+      now.by === "naked"
+        ? "That square had one number left in it."
+        : "That number had one place left to go in its row, column or shape."
+    );
+    setState((s) => hint(puzzle, s));
+  }, [puzzle, state]);
+
+  useEffect(() => {
+    if (!said) return;
+    const id = setTimeout(() => setSaid(null), 4000);
+    return () => clearTimeout(id);
+  }, [said]);
 
   const rubOut = useCallback(() => {
     if (at === null || solved) return;
@@ -203,6 +238,11 @@ export default function JigsawBoard({
             as you like, and writing a real number clears them.
           </p>
           <p className="intro">
+            Stuck? <b>Hint</b> fills in the next square that can actually be worked out, and says
+            why — three per board. If something already written is wrong it will tell you that
+            instead, without saying which.
+          </p>
+          <p className="intro">
             Clashes are marked but never blocked — putting a number in to see what it breaks is
             how these get solved. Every board here can be reasoned to the end with no guessing,
             and that is checked before it ships.
@@ -219,6 +259,7 @@ export default function JigsawBoard({
         {Array.from({ length: CELLS }, (_, c) => {
           const v = state.entries[c];
           const given = isGiven(puzzle, c);
+          const fromHint = state.shown.includes(c);
           const e = edges[c];
           const notes = v ? [] : notesIn(state, c);
           const sameRow = at !== null && rowOf(at) === rowOf(c);
@@ -231,6 +272,7 @@ export default function JigsawBoard({
             e.bottom ? "eb" : "",
             e.left ? "el" : "",
             given ? "given" : "",
+            fromHint ? "hinted" : "",
             bad.has(c) ? "clash" : "",
             at === c ? "at" : "",
             at !== null && at !== c && (sameRow || sameCol || sameShape) ? "seen" : "",
@@ -287,7 +329,23 @@ export default function JigsawBoard({
         <button className="tool" onClick={rubOut} disabled={at === null || solved}>
           Rub out
         </button>
+        {/* the count is on the button: three is the whole constraint, and it
+            should be readable at the moment you are deciding to spend one */}
+        <button
+          className="tool"
+          onClick={askHint}
+          disabled={solved || step.kind === "none"}
+          title="Fill in the next square that can be worked out"
+        >
+          Hint · {hintsLeft(state)}
+        </button>
       </div>
+
+      {said && (
+        <div className="js-said" role="status">
+          {said}
+        </div>
+      )}
 
       {celebrate && <Celebration onDone={() => setCelebrate(false)} />}
 

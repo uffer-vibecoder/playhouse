@@ -16,7 +16,8 @@ import {
   type Saved,
   type State,
 } from "./engine";
-import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
+import { loadProgress, recordResult, saveProgress, type SaveOutcome } from "@/lib/progress";
+import { blockoutSlot } from "@/lib/slots";
 import Celebration from "@/components/Celebration";
 
 const GAME_ID = "blockout";
@@ -32,7 +33,7 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
   const endedOnce = useRef(false);
 
   const slot = useMemo(
-    () => slotKey(GAME_ID, `run-${run}`, fingerprint([[seed]], String(seed))),
+    () => blockoutSlot(seed, run),
     [seed, run]
   );
   const restoring = restoredSlot !== slot;

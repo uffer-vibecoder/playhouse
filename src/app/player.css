@@ -1645,3 +1645,13 @@ footer{
 /* easy boards come with most of the page already filled in, so the badge is
    the quietest of the four rather than another coloured pill */
 .js-tier.easy{background:var(--tile); color:var(--muted)}
+
+/* a square a hint filled in: right, but not yours. Same reasoning as Word
+   Tray's hinted letters — a finished board should still say which squares you
+   worked out and which you were handed. */
+.js-cell.hinted{color:var(--muted); font-style:italic}
+.js-said{
+  margin:0 auto 12px; max-width:min(100%, 486px); padding:8px 12px;
+  border:1.5px solid var(--rule); border-radius:10px; background:var(--tile);
+  font-size:12px; color:var(--body); text-align:center;
+}

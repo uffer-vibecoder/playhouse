@@ -55,9 +55,11 @@ export type State = {
    * the save one number per cell instead of an array per cell.
    */
   marks: number[];
+  /** Cells filled in by a hint, so they can be shown as given rather than found. */
+  shown: number[];
 };
 
-export type Saved = { entries: number[]; marks?: number[] };
+export type Saved = { entries: number[]; marks?: number[]; shown?: number[] };
 
 export const SIZE = 9;
 const CELLS = SIZE * SIZE;
@@ -78,13 +80,17 @@ export function initialState(puzzle: Puzzle, restored?: Saved): State {
       if (Number.isInteger(m) && m! >= 0) marks[c] = m! & ALL;
     }
   }
-  return { entries, marks };
+  const shown = (restored?.shown ?? [])
+    .filter((c) => Number.isInteger(c) && c >= 0 && c < CELLS && !puzzle.given[c])
+    .slice(0, HINTS);
+  return { entries, marks, shown };
 }
 
 /** Only the dug cells are worth saving; the clues are in the archive. */
 export const toSave = (puzzle: Puzzle, s: State): Saved => ({
   entries: s.entries.map((v, c) => (puzzle.given[c] ? 0 : v)),
   marks: s.marks.map((m, c) => (puzzle.given[c] ? 0 : m)),
+  shown: s.shown,
 });
 
 /* ── writing ──────────────────────────────────────────────────────────────── */
@@ -103,7 +109,7 @@ export function write(puzzle: Puzzle, s: State, cell: number, value: number): St
      mind about this cell. */
   const marks = [...s.marks];
   marks[cell] = 0;
-  return { entries, marks };
+  return { entries, marks, shown: s.shown };
 }
 
 /**
@@ -117,7 +123,7 @@ export function note(puzzle: Puzzle, s: State, cell: number, value: number): Sta
   if (isGiven(puzzle, cell) || s.entries[cell]) return s;
   const marks = [...s.marks];
   marks[cell] ^= 1 << value;
-  return { entries: s.entries, marks };
+  return { entries: s.entries, marks, shown: s.shown };
 }
 
 export const hasNote = (s: State, cell: number, value: number) =>
@@ -138,7 +144,7 @@ export function erase(puzzle: Puzzle, s: State, cell: number): State {
   if (!s.marks[cell]) return s;
   const marks = [...s.marks];
   marks[cell] = 0;
-  return { entries: s.entries, marks };
+  return { entries: s.entries, marks, shown: s.shown };
 }
 
 /* ── seeing ───────────────────────────────────────────────────────────────── */
@@ -471,3 +477,66 @@ export function deduce(
 /** Can a person finish this board without guessing? */
 export const isReasonable = (regions: number[], given: number[]) =>
   deduce(regions, given).solved;
+
+/* ── hints ────────────────────────────────────────────────────────────────────
+   Three per board, and a hint gives the *next* square that can be worked out
+   from what is on the board right now — not a random cell, and not one picked
+   from the answer. The point is to show where the reasoning was available, so
+   the board can be carried on rather than just advanced by one.
+
+   Something written down wrong changes the answer entirely. Reasoning from a
+   board with a mistake in it derives more mistakes, so a hint refuses and says
+   there is one instead. Which square is wrong is not given away: knowing that
+   something is wrong is a hint, knowing exactly what is the answer.
+── */
+
+export const HINTS = 3;
+
+export const hintsLeft = (s: State) => HINTS - s.shown.length;
+
+/** Cells holding a number that is not the answer's. */
+export function mistakes(puzzle: Puzzle, s: State): number[] {
+  const out: number[] = [];
+  for (let c = 0; c < CELLS; c++) {
+    if (s.entries[c] && s.entries[c] !== puzzle.solution[c]) out.push(c);
+  }
+  return out;
+}
+
+export type Hint =
+  | { kind: "mistake"; count: number }
+  | { kind: "cell"; cell: number; value: number; by: Technique }
+  | { kind: "none" };
+
+/** What a hint would do, without doing it. */
+export function nextStep(puzzle: Puzzle, s: State): Hint {
+  if (hintsLeft(s) <= 0) return { kind: "none" };
+
+  const wrong = mistakes(puzzle, s);
+  if (wrong.length) return { kind: "mistake", count: wrong.length };
+
+  /* Everything on the board is right, so it can all be reasoned from. Run the
+     solver one step at a time and stop at the first square it fills that is
+     still empty here — that is the deduction that was there to be seen. */
+  const board = [...s.entries];
+  if (board.every((v) => v !== 0)) return { kind: "none" };
+
+  for (const by of ["naked", "hidden"] as Technique[]) {
+    const step = deduce(puzzle.regions, board, [by]);
+    for (let c = 0; c < CELLS; c++) {
+      if (!board[c] && step.grid[c]) return { kind: "cell", cell: c, value: step.grid[c], by };
+    }
+  }
+  return { kind: "none" };
+}
+
+/** Spend a hint. A no-op — costing nothing — when there is nothing to give. */
+export function hint(puzzle: Puzzle, s: State): State {
+  const step = nextStep(puzzle, s);
+  if (step.kind !== "cell") return s;
+  const entries = [...s.entries];
+  const marks = [...s.marks];
+  entries[step.cell] = step.value;
+  marks[step.cell] = 0;
+  return { entries, marks, shown: [...s.shown, step.cell] };
+}

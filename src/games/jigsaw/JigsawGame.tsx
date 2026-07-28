@@ -6,13 +6,14 @@ import { useSearchParams } from "next/navigation";
 import JigsawBoard from "./JigsawBoard";
 import type { Puzzle, Tier } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { jigsawSlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "jigsaw";
 
 const slotOf = (p: Puzzle) =>
-  slotKey(GAME_ID, p.id, fingerprint([p.given], p.regions.join("")));
+  jigsawSlot(p);
 
 const TIERS: Tier[] = ["easy", "gentle", "steady", "tricky"];
 

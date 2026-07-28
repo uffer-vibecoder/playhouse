@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import SlideBoard from "./SlideBoard";
 import type { Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { slideSlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "slide";
@@ -54,7 +55,7 @@ export default function SlideGame({ puzzles }: { puzzles: Puzzle[] }) {
   );
 
   const slotOf = (p: Puzzle) =>
-    slotKey(GAME_ID, p.id, fingerprint([[p.seed]], String(p.seed)));
+    slideSlot(p);
   const doneCount = puzzles.filter((p) => solved.has(slotOf(p))).length;
 
   return (

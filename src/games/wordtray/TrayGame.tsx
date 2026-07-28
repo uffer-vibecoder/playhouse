@@ -6,13 +6,14 @@ import { useSearchParams } from "next/navigation";
 import TrayBoard from "./TrayBoard";
 import type { Puzzle } from "./engine";
 import AuthBar from "@/components/AuthBar";
-import { fingerprint, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadSolvedSet } from "@/lib/progress";
+import { wordtraySlot } from "@/lib/slots";
 import { SITE } from "@/lib/site";
 
 const GAME_ID = "wordtray";
 
 const slotOf = (p: Puzzle) =>
-  slotKey(GAME_ID, p.id, fingerprint([[p.w, p.h]], p.letters));
+  wordtraySlot(p);
 
 export default function TrayGame({ puzzles }: { puzzles: Puzzle[] }) {
   const want = useSearchParams().get("p");

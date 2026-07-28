@@ -7,7 +7,8 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import Together from "@/components/Together";
 import StatShape, { Headline } from "@/components/StatShape";
 import { SITE } from "@/lib/site";
-import { fingerprint, loadGameSaves, loadResults, loadSolvedSet, slotKey } from "@/lib/progress";
+import { loadGameSaves, loadResults, loadSolvedSet } from "@/lib/progress";
+import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
 import {
   codewordRecord,
   playerRecord,
@@ -55,22 +56,14 @@ type BL = {
   gate: { edge: string; at: number; len: number };
 };
 
-const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
-const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answer));
-const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]], String(p.seed)));
-const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
-const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
-const jsSlot = (p: JS) => slotKey("jigsaw", p.id, fingerprint([p.given], p.regions.join("")));
-const wtSlot = (p: WT) => slotKey("wordtray", p.id, fingerprint([[p.w, p.h]], p.letters));
-const blSlot = (p: BL) =>
-  slotKey(
-    "blocks",
-    p.id,
-    fingerprint(
-      p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-      `${p.gate.edge}${p.gate.at}${p.gate.len}`
-    )
-  );
+const cwSlot = codewordSlot;
+const wgSlot = wordgameSlot;
+const sxSlot = solveforxSlot;
+const slSlot = slideSlot;
+const cgSlot = cryptogramSlot;
+const jsSlot = jigsawSlot;
+const wtSlot = wordtraySlot;
+const blSlot = blocksSlot;
 
 export default function Record() {
   const [games, setGames] = useState<GameRecord[] | null>(null);

@@ -11,8 +11,13 @@ import {
   initialState,
   isFull,
   isGiven,
+  HINTS,
   hasNote,
+  hint,
+  hintsLeft,
   isSolved,
+  mistakes,
+  nextStep,
   note,
   notesIn,
   peers,
@@ -196,7 +201,7 @@ test("taking a clue away leaves more than one answer, or the dig went too far", 
 
 const blank = (p: Puzzle) => p.given.findIndex((v) => v === 0);
 /** a state with given entries and no pencil marks */
-const filled = (entries: number[]) => ({ entries, marks: new Array(CELLS).fill(0) });
+const filled = (entries: number[]) => ({ entries, marks: new Array(CELLS).fill(0), shown: [] });
 
 test("a clue cannot be written over", () => {
   const at = P.given.findIndex((v) => v !== 0);
@@ -366,4 +371,70 @@ test("a save can never overwrite a clue", () => {
 test("a save of the wrong shape is ignored rather than trusted", () => {
   const back = initialState(P, { entries: [1, 2, 3] });
   assert.deepEqual(back.entries, [...P.given]);
+});
+
+/* ── hints ────────────────────────────────────────────────────────────────── */
+
+test("a hint fills the next square that can actually be worked out", () => {
+  const s = initialState(P);
+  const step = nextStep(P, s);
+  assert.equal(step.kind, "cell");
+  if (step.kind !== "cell") return;
+  assert.equal(step.value, P.solution[step.cell], "and it fills in the right number");
+  assert.equal(s.entries[step.cell], 0, "into a square that was empty");
+
+  const after = hint(P, s);
+  assert.equal(after.entries[step.cell], step.value);
+  assert.deepEqual(after.shown, [step.cell]);
+});
+
+test("only three, and then nothing", () => {
+  let s = initialState(P);
+  assert.equal(hintsLeft(s), HINTS);
+  for (let i = 1; i <= HINTS; i++) {
+    s = hint(P, s);
+    assert.equal(hintsLeft(s), HINTS - i);
+  }
+  assert.equal(nextStep(P, s).kind, "none");
+  assert.equal(hint(P, s), s, "the fourth ask changes nothing at all");
+});
+
+test("a hint refuses to reason from a board with a mistake on it", () => {
+  // reasoning from a wrong number derives more wrong numbers, so it says there
+  // is one instead — and does not say which, because that would be the answer
+  const at = blank(P);
+  const wrong = P.solution[at] === 9 ? 1 : 9;
+  const s = write(P, initialState(P), at, wrong);
+  const step = nextStep(P, s);
+  assert.equal(step.kind, "mistake");
+  if (step.kind === "mistake") assert.equal(step.count, 1);
+  assert.equal(hint(P, s), s, "and it costs nothing");
+  assert.deepEqual(mistakes(P, s), [at]);
+});
+
+test("a right answer written by the player is not a mistake", () => {
+  const at = blank(P);
+  const s = write(P, initialState(P), at, P.solution[at]);
+  assert.deepEqual(mistakes(P, s), []);
+  assert.equal(nextStep(P, s).kind, "cell", "and reasoning carries on from it");
+});
+
+test("hints survive a reload, and a save cannot invent extra ones", () => {
+  const s = hint(P, hint(P, initialState(P)));
+  const back = initialState(P, toSave(P, s));
+  assert.deepEqual(back.shown, s.shown);
+  assert.equal(hintsLeft(back), HINTS - 2);
+
+  const greedy = initialState(P, {
+    entries: new Array(81).fill(0),
+    shown: [...Array(20).keys()].concat([999]),
+  });
+  assert.ok(greedy.shown.length <= HINTS, "a save claiming twenty hints gets three");
+  assert.ok(!greedy.shown.includes(999), "and a cell off the board is dropped");
+});
+
+test("a hint says which kind of reasoning it used", () => {
+  // it is meant to show where the deduction was, not just advance the board
+  const step = nextStep(P, initialState(P));
+  if (step.kind === "cell") assert.ok(step.by === "naked" || step.by === "hidden");
 });

@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import AuthBar from "@/components/AuthBar";
 import Mark from "@/components/Mark";
 import { SITE } from "@/lib/site";
-import { fingerprint, lastUnfinished, loadSolvedSet, slotKey, type Bookmark } from "@/lib/progress";
+import { lastUnfinished, loadSolvedSet, type Bookmark } from "@/lib/progress";
+import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
 import { stamps, earnedCount, nearest, share, type Stamp } from "@/lib/achievements";
 
 import codeword from "@/data/codeword.json";
@@ -46,22 +47,14 @@ type BL = {
   gate: { edge: string; at: number; len: number };
 };
 
-const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
-const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answer));
-const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]], String(p.seed)));
-const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
-const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
-const wtSlot = (p: WT) => slotKey("wordtray", p.id, fingerprint([[p.w, p.h]], p.letters));
-const jsSlot = (p: JS) => slotKey("jigsaw", p.id, fingerprint([p.given], p.regions.join("")));
-const blSlot = (p: BL) =>
-  slotKey(
-    "blocks",
-    p.id,
-    fingerprint(
-      p.blocks.map((b) => [b.x, b.y, b.w, b.h]),
-      `${p.gate.edge}${p.gate.at}${p.gate.len}`
-    )
-  );
+const cwSlot = codewordSlot;
+const wgSlot = wordgameSlot;
+const sxSlot = solveforxSlot;
+const slSlot = slideSlot;
+const cgSlot = cryptogramSlot;
+const wtSlot = wordtraySlot;
+const jsSlot = jigsawSlot;
+const blSlot = blocksSlot;
 
 type Entry = {
   num: string;
