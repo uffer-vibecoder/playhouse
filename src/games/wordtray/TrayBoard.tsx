@@ -401,7 +401,7 @@ export default function TrayBoard({
       </div>
 
       {solved && (
-        <div className="win">
+        <div className="win show">
           Every word found{state.extras.length ? `, and ${state.extras.length} the grid did not want` : ""}.
         </div>
       )}

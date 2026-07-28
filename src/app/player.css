@@ -1549,3 +1549,95 @@ footer{
   .tracker{grid-template-columns:repeat(13,1fr)}
   .status{font-size:9px; letter-spacing:1.2px}
 }
+
+/* ── jigsaw sudoku ────────────────────────────────────────────────────────────
+   The shapes are the game, so they get the heavy rule and everything else stays
+   quiet. A thin line between cells, a thick one wherever a shape ends — drawn
+   per cell rather than as a grid overlay, because the boundaries are irregular
+   and there is no lattice to draw.
+── */
+.js-meta{display:flex; align-items:baseline; gap:10px; margin:12px 0 6px}
+.js-tier{
+  padding:3px 10px; border-radius:999px; background:var(--tile); color:var(--body);
+  font-family:var(--ui); font-size:10px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase;
+}
+.js-tier.tricky{background:var(--fill); color:var(--fill-text)}
+.js-tiernote{font-size:12px; color:var(--muted)}
+
+.js-grid{
+  display:grid; grid-template-columns:repeat(9, 1fr);
+  width:100%; max-width:min(100%, 486px); margin:0 auto 14px;
+  border:2.5px solid var(--ink); border-radius:4px; overflow:hidden;
+  background:#FFFFFF;
+}
+.js-cell{
+  position:relative; aspect-ratio:1; min-width:0; margin:0; padding:0;
+  display:grid; place-items:center; cursor:pointer;
+  border:0; border-top:1px solid var(--rule); border-left:1px solid var(--rule);
+  background:#FFFFFF; color:var(--ink);
+  font-family:var(--display); font-weight:500; font-size:20px; line-height:1;
+}
+/* the heavy edges, where one shape stops and the next begins */
+.js-cell.et{border-top:2.5px solid var(--ink)}
+.js-cell.el{border-left:2.5px solid var(--ink)}
+.js-cell.er{border-right:2.5px solid var(--ink)}
+.js-cell.eb{border-bottom:2.5px solid var(--ink)}
+
+/* A clue is the board's, not yours: heavier, and on paper rather than white.
+   Everything you put in stays light, so the two never blur together. */
+.js-cell.given{background:var(--tile); font-weight:800}
+.js-cell.seen{background:var(--tile)}
+.js-cell.given.seen{background:var(--underline)}
+.js-cell.echo .js-num{
+  /* the same number elsewhere — a ring, not a fill, so it reads under the
+     row-and-column shading rather than fighting it */
+  outline:2px solid var(--fill); outline-offset:2px; border-radius:3px;
+}
+.js-cell.at{background:var(--fill); box-shadow:inset 0 0 0 2px var(--ink)}
+.js-cell.clash{color:var(--accent-text)}
+.js-cell.clash .js-num{text-decoration:underline; text-decoration-thickness:2px}
+.js-cell:disabled{cursor:default}
+
+.js-num{display:block}
+/* pencil marks, in the nine places they would go on paper */
+.js-notes{
+  display:grid; grid-template-columns:repeat(3, 1fr); width:100%; height:100%;
+  place-items:center; font-family:var(--ui); font-size:9px; font-weight:600;
+  color:var(--muted); line-height:1;
+}
+.js-notes span{display:block}
+
+.js-pad{
+  display:grid; grid-template-columns:repeat(9, 1fr); gap:4px;
+  max-width:min(100%, 486px); margin:0 auto 8px;
+}
+.js-key{
+  aspect-ratio:1; margin:0; padding:0; border:2px solid var(--ink); border-radius:8px;
+  background:#FFFFFF; color:var(--ink); cursor:pointer;
+  font-family:var(--display); font-weight:600; font-size:19px;
+}
+.js-key:active{background:var(--fill)}
+/* all nine of that number are placed — it is not disabled, because one of them
+   may well be wrong, but there is no reason to reach for it */
+.js-key.spent{color:var(--underline); border-color:var(--underline)}
+.js-key:disabled{cursor:default; opacity:.45}
+
+.js-tools{display:flex; justify-content:center; gap:8px; margin-bottom:12px}
+.js-tools .tool{flex:0 0 auto; min-width:96px}
+.js-tools .tool[aria-pressed="true"]{background:var(--fill); border-color:var(--ink)}
+
+.js-group{margin-bottom:10px}
+.js-grouphead{
+  display:block; margin-bottom:4px;
+  font-family:var(--ui); font-size:10px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--muted);
+}
+
+@media (max-width:560px){
+  .js-cell{font-size:16px}
+  .js-notes{font-size:7px}
+  .js-key{font-size:16px; border-width:1.5px}
+  .js-pad{gap:3px}
+  .js-tiernote{display:none}
+}

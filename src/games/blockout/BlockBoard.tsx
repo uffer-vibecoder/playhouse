@@ -300,7 +300,7 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
       </div>
 
       {done && (
-        <div className="win">
+        <div className="win show">
           Nothing else fits. {state.score} points from {state.placed} pieces.
         </div>
       )}

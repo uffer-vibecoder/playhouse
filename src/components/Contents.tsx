@@ -16,6 +16,7 @@ import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
 import freeatro from "@/data/freeatro.json";
 import wordtray from "@/data/wordtray.json";
+import jigsaw from "@/data/jigsaw.json";
 
 /**
  * The contents page — design 6a, and 6b on a phone.
@@ -40,6 +41,7 @@ type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
 type FA = { id: string; seed: number };
 type WT = { id: string; letters: string; w: number; h: number };
+type JS = { id: string; given: number[]; regions: number[] };
 type BL = {
   id: string;
   blocks: { x: number; y: number; w: number; h: number }[];
@@ -53,6 +55,7 @@ const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], Str
 const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
 const faSlot = (p: FA) => slotKey("freeatro", p.id, fingerprint([[p.seed]], String(p.seed)));
 const wtSlot = (p: WT) => slotKey("wordtray", p.id, fingerprint([[p.w, p.h]], p.letters));
+const jsSlot = (p: JS) => slotKey("jigsaw", p.id, fingerprint([p.given], p.regions.join("")));
 const blSlot = (p: BL) =>
   slotKey(
     "blocks",
@@ -83,6 +86,7 @@ const ROUTE: Record<string, string> = {
   freeatro: "/games/freeatro",
   blockout: "/games/blockout",
   wordtray: "/games/wordtray",
+  jigsaw: "/games/jigsaw",
 };
 
 const LABEL: Record<string, string> = {
@@ -95,6 +99,7 @@ const LABEL: Record<string, string> = {
   freeatro: "Free-Atro",
   blockout: "Block Out!",
   wordtray: "Word Tray",
+  jigsaw: "Jigsaw Sudoku",
 };
 
 /**
@@ -126,7 +131,7 @@ export default function Contents() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, fa, wt] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, fa, wt, js] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
@@ -135,6 +140,7 @@ export default function Contents() {
         loadSolvedSet("blocks"),
         loadSolvedSet("freeatro"),
         loadSolvedSet("wordtray"),
+        loadSolvedSet("jigsaw"),
       ]);
       if (!alive) return;
 
@@ -198,10 +204,12 @@ export default function Contents() {
           blurb: "Seven letters and a small crossword made only of what they spell. No clues — the letters are the clue.",
           total: wordtray.length, done: count(wordtray as WT[], wt, wtSlot),
         },
-        // The draft takes the next number rather than keeping its own. The rule
-        // is that a shipped entry never moves — nobody has navigated to a draft,
-        // so nothing is being pulled out from under anyone.
-        { num: "10", name: "Jigsaw Sudoku", count: "in draft", blurb: "the regions are the hard part", total: 0, done: 0 },
+        {
+          num: "10", name: "Jigsaw Sudoku", href: ROUTE.jigsaw,
+          count: `${jigsaw.length} boards`,
+          blurb: "Sudoku with the nine boxes cut into nine shapes. Every board can be reasoned to the end without a guess.",
+          total: jigsaw.length, done: count(jigsaw as JS[], js, jsSlot),
+        },
       ]);
 
       setMark(lastUnfinished());
@@ -216,8 +224,9 @@ export default function Contents() {
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
             { id: "freeatro", name: "Free-Atro", puzzles: freeatro as FA[], slotOf: (p) => faSlot(p as FA) },
             { id: "wordtray", name: "Word Tray", puzzles: wordtray as WT[], slotOf: (p) => wtSlot(p as WT) },
+            { id: "jigsaw", name: "Jigsaw Sudoku", puzzles: jigsaw as JS[], slotOf: (p) => jsSlot(p as JS) },
           ],
-          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa, ...wt])
+          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa, ...wt, ...js])
         )
       );
     })();
@@ -225,7 +234,7 @@ export default function Contents() {
   }, []);
 
   const total =
-    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length + freeatro.length + wordtray.length;
+    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length + freeatro.length + wordtray.length + jigsaw.length;
   const carryOn = mark ? `${ROUTE[mark.gameId] ?? "/"}?p=${encodeURIComponent(mark.puzzleId)}` : null;
   const going = nearest(badges);
   const here = mark ? entries?.find((e) => e.href === ROUTE[mark.gameId]) : null;

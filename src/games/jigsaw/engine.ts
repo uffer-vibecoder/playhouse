@@ -47,15 +47,26 @@ export type State = {
   /** what the player has written; 0 for empty. Givens are copied in and never
    *  change, so one array answers "what is in this cell" everywhere. */
   entries: number[];
+  /**
+   * Pencil marks, one bitmask per cell: bit v set means v is pencilled in.
+   *
+   * A mask rather than a list of numbers per cell. Nine booleans is exactly
+   * what this is, it makes "is 4 pencilled here" a single test, and it keeps
+   * the save one number per cell instead of an array per cell.
+   */
+  marks: number[];
 };
 
-export type Saved = { entries: number[] };
+export type Saved = { entries: number[]; marks?: number[] };
 
 export const SIZE = 9;
 const CELLS = SIZE * SIZE;
+/** bits 1..9 — the shape of a pencil-mark mask, and of a candidate set */
+const ALL = 0b1111111110;
 
 export function initialState(puzzle: Puzzle, restored?: Saved): State {
   const entries = [...puzzle.given];
+  const marks = new Array<number>(CELLS).fill(0);
   if (restored?.entries?.length === CELLS) {
     for (let c = 0; c < CELLS; c++) {
       // a given always wins: a save from an older cut of the archive could
@@ -63,14 +74,17 @@ export function initialState(puzzle: Puzzle, restored?: Saved): State {
       if (puzzle.given[c]) continue;
       const v = restored.entries[c];
       if (Number.isInteger(v) && v >= 0 && v <= 9) entries[c] = v;
+      const m = restored.marks?.[c];
+      if (Number.isInteger(m) && m! >= 0) marks[c] = m! & ALL;
     }
   }
-  return { entries };
+  return { entries, marks };
 }
 
 /** Only the dug cells are worth saving; the clues are in the archive. */
 export const toSave = (puzzle: Puzzle, s: State): Saved => ({
   entries: s.entries.map((v, c) => (puzzle.given[c] ? 0 : v)),
+  marks: s.marks.map((m, c) => (puzzle.given[c] ? 0 : m)),
 });
 
 /* ── writing ──────────────────────────────────────────────────────────────── */
@@ -82,15 +96,50 @@ export function write(puzzle: Puzzle, s: State, cell: number, value: number): St
   if (s.entries[cell] === value) return s;
   const entries = [...s.entries];
   entries[cell] = value;
-  return { entries };
+  /* Writing a number clears that cell's pencil marks — they were notes about
+     what might go here, and something now does. Marks in *other* cells are
+     left alone on purpose: rubbing them out automatically would erase work the
+     player has not agreed to lose, and be wrong the moment they change their
+     mind about this cell. */
+  const marks = [...s.marks];
+  marks[cell] = 0;
+  return { entries, marks };
 }
+
+/**
+ * Pencil in a candidate, or rub it out if it is already there.
+ *
+ * Only in an empty cell. Notes about what might go somewhere are meaningless
+ * once something is written there, and silently discarding the number to make
+ * room for a note would be a surprising way to lose an answer.
+ */
+export function note(puzzle: Puzzle, s: State, cell: number, value: number): State {
+  if (isGiven(puzzle, cell) || s.entries[cell]) return s;
+  const marks = [...s.marks];
+  marks[cell] ^= 1 << value;
+  return { entries: s.entries, marks };
+}
+
+export const hasNote = (s: State, cell: number, value: number) =>
+  (s.marks[cell] & (1 << value)) !== 0;
+
+export const notesIn = (s: State, cell: number): number[] =>
+  Array.from({ length: 9 }, (_, i) => i + 1).filter((v) => hasNote(s, cell, v));
 
 /** Writing the value already there clears it — one control, not two. */
 export function toggle(puzzle: Puzzle, s: State, cell: number, value: number): State {
   return write(puzzle, s, cell, s.entries[cell] === value ? 0 : value);
 }
 
-export const erase = (puzzle: Puzzle, s: State, cell: number) => write(puzzle, s, cell, 0);
+/** Rub out whatever is in a cell — the number if there is one, else the notes. */
+export function erase(puzzle: Puzzle, s: State, cell: number): State {
+  if (isGiven(puzzle, cell)) return s;
+  if (s.entries[cell]) return write(puzzle, s, cell, 0);
+  if (!s.marks[cell]) return s;
+  const marks = [...s.marks];
+  marks[cell] = 0;
+  return { entries: s.entries, marks };
+}
 
 /* ── seeing ───────────────────────────────────────────────────────────────── */
 
@@ -344,8 +393,6 @@ export const hasOneSolution = (regions: number[], given: number[], budget = 200_
 ── */
 
 export type Technique = "naked" | "hidden";
-
-const ALL = 0b1111111110; // bits 1..9
 
 /** Work the board with singles alone. Reports how far it got, and on what. */
 export function deduce(

@@ -293,7 +293,7 @@ export default function BlocksBoard({
       </div>
 
       {solved && (
-        <div className="win">
+        <div className="win show">
           {state.moves <= puzzle.par
             ? `Out in ${state.moves} — that is the shortest way there is.`
             : `Out in ${state.moves}. The shortest way is ${puzzle.par}.`}

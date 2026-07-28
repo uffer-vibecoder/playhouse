@@ -11,7 +11,10 @@ import {
   initialState,
   isFull,
   isGiven,
+  hasNote,
   isSolved,
+  note,
+  notesIn,
   peers,
   progress,
   rowOf,
@@ -177,6 +180,8 @@ test("taking a clue away leaves more than one answer, or the dig went too far", 
 /* ── playing ──────────────────────────────────────────────────────────────── */
 
 const blank = (p: Puzzle) => p.given.findIndex((v) => v === 0);
+/** a state with given entries and no pencil marks */
+const filled = (entries: number[]) => ({ entries, marks: new Array(CELLS).fill(0) });
 
 test("a clue cannot be written over", () => {
   const at = P.given.findIndex((v) => v !== 0);
@@ -218,7 +223,7 @@ test("a clash is reported, not prevented", () => {
 });
 
 test("a board filled in correctly has no clash and is solved", () => {
-  const s = { entries: [...P.solution] };
+  const s = filled([...P.solution]);
   assert.equal(conflicts(P, s).size, 0);
   assert.ok(isFull(s));
   assert.ok(isSolved(P, s));
@@ -229,7 +234,7 @@ test("a full board that is wrong is not solved", () => {
   const at = blank(P);
   const other = peers(P.regions, at).find((c) => !isGiven(P, c))!;
   [entries[at], entries[other]] = [entries[other], entries[at]];
-  const s = { entries };
+  const s = filled(entries);
   assert.ok(isFull(s));
   assert.ok(!isSolved(P, s), "full is not the same as finished");
 });
@@ -248,7 +253,79 @@ test("progress counts the cells you filled, not the ones you were given", () => 
   );
 });
 
+/* ── pencil marks ─────────────────────────────────────────────────────────── */
+
+test("a note goes in and comes out again", () => {
+  const at = blank(P);
+  let s = note(P, initialState(P), at, 4);
+  assert.ok(hasNote(s, at, 4));
+  assert.deepEqual(notesIn(s, at), [4]);
+  s = note(P, s, at, 7);
+  assert.deepEqual(notesIn(s, at), [4, 7], "notes are kept in order, not in the order typed");
+  s = note(P, s, at, 4);
+  assert.deepEqual(notesIn(s, at), [7], "the same note twice rubs it out");
+});
+
+test("all nine can be pencilled into one cell", () => {
+  const at = blank(P);
+  let s = initialState(P);
+  for (let v = 1; v <= 9; v++) s = note(P, s, at, v);
+  assert.deepEqual(notesIn(s, at), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test("notes cannot be written on a clue, or over an answer", () => {
+  const given = P.given.findIndex((v) => v !== 0);
+  const s0 = initialState(P);
+  assert.equal(note(P, s0, given, 3), s0, "a clue takes no notes");
+
+  const at = blank(P);
+  const written = write(P, s0, at, 5);
+  assert.equal(note(P, written, at, 3), written, "and neither does a cell with a number in it");
+});
+
+test("writing a number clears that cell's notes and leaves every other cell alone", () => {
+  const at = blank(P);
+  const other = peers(P.regions, at).find((c) => !isGiven(P, c))!;
+  let s = initialState(P);
+  s = note(P, s, at, 2);
+  s = note(P, s, other, 2);
+  s = write(P, s, at, 2);
+  assert.deepEqual(notesIn(s, at), [], "the notes here were about what might go here");
+  assert.deepEqual(notesIn(s, other), [2], "notes elsewhere are the player's to keep");
+});
+
+test("erase takes the number first, then the notes", () => {
+  const at = blank(P);
+  let s = note(P, note(P, initialState(P), at, 1), at, 8);
+  s = write(P, s, at, 3);
+  s = erase(P, s, at);
+  assert.equal(s.entries[at], 0, "the number goes");
+  s = note(P, s, at, 1);
+  s = erase(P, s, at);
+  assert.deepEqual(notesIn(s, at), [], "and a second erase takes the notes");
+});
+
 /* ── saving ───────────────────────────────────────────────────────────────── */
+
+test("notes survive a save, and a save cannot pencil on a clue", () => {
+  const at = blank(P);
+  const given = P.given.findIndex((v) => v !== 0);
+  const s = note(P, note(P, initialState(P), at, 3), at, 9);
+  const back = initialState(P, toSave(P, s));
+  assert.deepEqual(notesIn(back, at), [3, 9]);
+
+  const junk = new Array(CELLS).fill(0);
+  junk[given] = 0b1111111110;
+  const forged = initialState(P, { entries: new Array(CELLS).fill(0), marks: junk });
+  assert.deepEqual(notesIn(forged, given), [], "a clue has nothing to decide");
+});
+
+test("a save with no notes at all still loads", () => {
+  // every save written before pencil marks existed looks like this
+  const back = initialState(P, { entries: new Array(CELLS).fill(0) });
+  assert.deepEqual(back.entries, [...P.given]);
+  assert.ok(back.marks.every((m) => m === 0));
+});
 
 test("a save carries what you wrote and nothing you were given", () => {
   const at = blank(P);

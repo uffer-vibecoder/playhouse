@@ -347,7 +347,7 @@ export default function FreeAtroBoard({
       </div>
 
       {won && (
-        <div className="win">
+        <div className="win show">
           {beat
             ? `Home in ${state.moves}, and ${score.total} beats ${target}.`
             : `Home in ${state.moves} for ${score.total} — the target was ${target}.`}
