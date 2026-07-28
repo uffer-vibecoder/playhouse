@@ -96,6 +96,34 @@ function ScoreRows({ r }: { r: GameRecord }) {
   );
 }
 
+/**
+ * A run's shape: the best, and the last few.
+ *
+ * No grid of completions, because there is nothing to complete. The bars are
+ * relative to the best rather than to a fixed ceiling — a run game has no
+ * maximum, so the only honest scale is your own.
+ */
+function Run({ r }: { r: GameRecord }) {
+  const scores = r.lastFive ?? [];
+  const top = r.best?.score ?? 0;
+  if (!scores.length) {
+    return <p className="nothingyet">Play one and it will be here.</p>;
+  }
+  return (
+    <div className="runshape">
+      {scores.map((n, i) => (
+        <span className="runbar" key={i} title={`${n}`}>
+          <span
+            style={{ height: `${top ? Math.max(6, (n / top) * 100) : 6}%` }}
+            className={n === top ? "onbest" : ""}
+          />
+          <b>{n}</b>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function StatShape({ record }: { record: GameRecord }) {
   switch (record.shape) {
     case "archive":
@@ -104,6 +132,8 @@ export default function StatShape({ record }: { record: GameRecord }) {
       return <Distribution r={record} />;
     case "scoreRows":
       return <ScoreRows r={record} />;
+    case "run":
+      return <Run r={record} />;
     case "draft":
       return null;
   }
@@ -124,6 +154,23 @@ export function Headline({ record }: { record: GameRecord }) {
       <div className="headline">
         <span className="headnum">{record.average.toFixed(1)}</span>
         <span className="headlabel">average out of {record.outOf}</span>
+      </div>
+    );
+  }
+
+  if (record.shape === "run") {
+    return record.best ? (
+      <div className="headline">
+        <span className="headnum">{record.best.score}</span>
+        <span className="headlabel">
+          best{record.best.detail ? ` · ${record.best.detail}` : ""}
+        </span>
+      </div>
+    ) : (
+      <div className="headline">
+        {/* Not zero: nobody has scored nothing, nobody has played. */}
+        <span className="headnum dash">—</span>
+        <span className="headlabel">nothing scored yet</span>
       </div>
     );
   }

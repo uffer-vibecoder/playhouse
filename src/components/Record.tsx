@@ -13,6 +13,7 @@ import {
   draftRecord,
   playerRecord,
   simpleRecord,
+  runRecord,
   solveRecord,
   wordRecord,
   type GameRecord,
@@ -73,7 +74,7 @@ export default function Record() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, fa, wgSaves, sxSaves] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, fa, faRuns, boRuns, wgSaves, sxSaves] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
@@ -81,6 +82,8 @@ export default function Record() {
         loadSolvedSet("cryptogram"),
         loadSolvedSet("blocks"),
         loadSolvedSet("freeatro"),
+        loadGameSaves<Record<string, unknown>>("freeatro"),
+        loadGameSaves<Record<string, unknown>>("blockout"),
         loadGameSaves<{ guesses?: string[] }>("wordgame"),
         loadGameSaves<{ firstScore?: number }>("solveforx"),
       ]);
@@ -93,9 +96,38 @@ export default function Record() {
         simpleRecord("slide", "04", "Sliding Tiles", slide as Seeded[], sl, (p) => slSlot(p as Seeded)),
         simpleRecord("cryptogram", "05", "Cryptogram", cryptogram as CG[], cg, (p) => cgSlot(p as CG)),
         simpleRecord("blocks", "06", "Colour Blocks", blocks as BL[], bl, (p) => blSlot(p as BL)),
-        simpleRecord("freeatro", "07", "Free-Atro", freeatro as FA[], fa, (p) => faSlot(p as FA)),
-        draftRecord("wordtray", "08", "Word Tray", "in draft — the letters are the clue"),
-        draftRecord("sudoku", "09", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
+        // Runs, not archives: neither of these has anything to finish.
+        runRecord(
+          "freeatro",
+          "07",
+          "Free-Atro",
+          "round",
+          [...faRuns.values()]
+            .map((r) => ({ at: r.updatedAt, summary: (r.entries ?? {}) as Record<string, unknown> }))
+            .sort((a, b) => b.at.localeCompare(a.at)),
+          // Free-Atro keeps a whole Score object; the banked total is the number
+          (sum) => {
+            const score = sum.score as { total?: number } | undefined;
+            return typeof score?.total === "number" ? score.total : null;
+          },
+          (sum) => {
+            const moves = sum.moves;
+            return typeof moves === "number" ? `${moves} moves` : null;
+          }
+        ),
+        runRecord(
+          "blockout",
+          "08",
+          "Block Out!",
+          "run",
+          [...boRuns.values()]
+            .map((r) => ({ at: r.updatedAt, summary: (r.entries ?? {}) as Record<string, unknown> }))
+            .sort((a, b) => b.at.localeCompare(a.at)),
+          (sum) => (typeof sum.score === "number" ? sum.score : null),
+          (sum) => (typeof sum.placed === "number" ? `${sum.placed} pieces` : null)
+        ),
+        draftRecord("wordtray", "09", "Word Tray", "in draft — the letters are the clue"),
+        draftRecord("sudoku", "10", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
       ]);
 
       const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + fa.size;

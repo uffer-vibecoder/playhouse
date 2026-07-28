@@ -19,7 +19,7 @@
  * approximated.
  */
 
-export type Shape = "archive" | "distribution" | "scoreRows" | "draft";
+export type Shape = "archive" | "distribution" | "scoreRows" | "run" | "draft";
 
 export type SetProgress = { name: string; done: number; of: number };
 
@@ -38,6 +38,10 @@ export type GameRecord = {
   average?: number | null;
   outOf?: number;
   recent?: { label: string; score: number }[];
+  /** for the `run` shape: what the best attempt looked like */
+  best?: { score: number; when: string | null; detail: string | null };
+  runs?: number;
+  lastFive?: number[];
 };
 
 export type PlayerRecord = {
@@ -186,6 +190,64 @@ export const simpleRecord = (
     archive: { total: puzzles.length, done },
   };
 };
+
+/**
+ * A game that is a run rather than an archive.
+ *
+ * Block Out! and Free-Atro have nothing to finish, so counting completions is
+ * not merely unhelpful here, it is a category error: "3 of 60 done" describes
+ * something the game does not have. What they have instead is a best, and how
+ * often they have been played.
+ *
+ * Built from `game_results` rather than from saves, because a run leaves no
+ * solved flag behind — the row written when it ended is the only record that it
+ * happened at all.
+ */
+export function runRecord(
+  id: string,
+  num: string,
+  name: string,
+  /** the word for one attempt: Block Out! has runs, Free-Atro has rounds */
+  unit: string,
+  results: { at: string; summary: Record<string, unknown> }[],
+  /**
+   * How to read a score out of this game's save.
+   *
+   * Passed in rather than assumed, because the two games do not agree: Block
+   * Out! stores a number and Free-Atro stores a whole Score object. Reading
+   * `summary.score` for both would have quietly given NaN for one of them and
+   * shown it as never having been played.
+   */
+  scoreOf: (summary: Record<string, unknown>) => number | null,
+  detailOf: (summary: Record<string, unknown>) => string | null
+): GameRecord {
+  const scored = results
+    .map((r) => ({ ...r, score: scoreOf(r.summary) ?? NaN }))
+    .filter((r) => Number.isFinite(r.score) && r.score > 0);
+
+  const top = scored.reduce<(typeof scored)[number] | null>(
+    (best, r) => (!best || r.score > best.score ? r : best),
+    null
+  );
+
+  return {
+    id,
+    num,
+    name,
+    shape: "run",
+    note: scored.length
+      ? `${scored.length} ${unit}${scored.length === 1 ? "" : "s"} · nothing to finish, only to beat`
+      : `no ${unit}s yet — nothing to finish here, only to beat`,
+    runs: scored.length,
+    best: top
+      ? { score: top.score, when: top.at, detail: detailOf(top.summary) }
+      : undefined,
+    // The five most recent, then reversed: they arrive newest-first, and a
+    // strip of scores reading right to left is a small thing to have to
+    // work out. Left to right is oldest to newest, like any other trend.
+    lastFive: scored.slice(0, 5).map((r) => r.score).reverse(),
+  };
+}
 
 export const draftRecord = (id: string, num: string, name: string, note: string): GameRecord => ({
   id,
