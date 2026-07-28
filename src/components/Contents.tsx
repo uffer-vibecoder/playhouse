@@ -14,6 +14,7 @@ import solveforx from "@/data/solveforx.json";
 import slide from "@/data/slide.json";
 import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
+import freeatro from "@/data/freeatro.json";
 
 /**
  * The contents page — design 6a, and 6b on a phone.
@@ -36,6 +37,7 @@ type CW = { id: string; theme?: string; grid: number[][]; key: string };
 type Seeded = { id: string; seed: number };
 type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
+type FA = { id: string; seed: number };
 type BL = { id: string; blocks: { x: number; y: number; w: number; h: number }[]; gates: { edge: string; at: number; len: number; hue: string }[] };
 
 const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
@@ -43,6 +45,7 @@ const wgSlot = (p: WG) => slotKey("wordgame", p.id, fingerprint([[5, 6]], p.answ
 const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]], String(p.seed)));
 const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
 const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
+const faSlot = (p: FA) => slotKey("freeatro", p.id, fingerprint([[p.seed]], String(p.seed)));
 const blSlot = (p: BL) =>
   slotKey(
     "blocks",
@@ -70,6 +73,7 @@ const ROUTE: Record<string, string> = {
   slide: "/games/slide",
   cryptogram: "/games/cryptogram",
   blocks: "/games/blocks",
+  freeatro: "/games/freeatro",
 };
 
 const LABEL: Record<string, string> = {
@@ -79,6 +83,7 @@ const LABEL: Record<string, string> = {
   slide: "Sliding Tiles",
   cryptogram: "Cryptogram",
   blocks: "Colour Blocks",
+  freeatro: "Free-Atro",
 };
 
 /**
@@ -110,13 +115,14 @@ export default function Contents() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, fa] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
         loadSolvedSet("slide"),
         loadSolvedSet("cryptogram"),
         loadSolvedSet("blocks"),
+        loadSolvedSet("freeatro"),
       ]);
       if (!alive) return;
 
@@ -160,11 +166,17 @@ export default function Contents() {
           blurb: "Slide the blocks out through gates that match them. Every board's shortest route is known.",
           total: blocks.length, done: count(blocks as BL[], bl, blSlot),
         },
+        {
+          num: "07", name: "Free-Atro", href: ROUTE.freeatro,
+          count: `${freeatro.length} deals`,
+          blurb: "Freecell with a score on it. Every deal was won by the builder before it shipped.",
+          total: freeatro.length, done: count(freeatro as FA[], fa, faSlot),
+        },
         // The drafts take the next numbers rather than keeping theirs. The rule
         // is that a shipped entry never moves — nobody has navigated to a draft,
         // so nothing is being pulled out from under anyone.
-        { num: "07", name: "Word Tray", count: "in draft", blurb: "the letters are the clue", total: 0, done: 0 },
-        { num: "08", name: "Jigsaw Sudoku", count: "in draft", blurb: "the regions are the hard part", total: 0, done: 0 },
+        { num: "08", name: "Word Tray", count: "in draft", blurb: "the letters are the clue", total: 0, done: 0 },
+        { num: "09", name: "Jigsaw Sudoku", count: "in draft", blurb: "the regions are the hard part", total: 0, done: 0 },
       ]);
 
       setMark(lastUnfinished());
@@ -177,8 +189,9 @@ export default function Contents() {
             { id: "slide", name: "Sliding Tiles", puzzles: slide as Seeded[], slotOf: (p) => slSlot(p as Seeded) },
             { id: "cryptogram", name: "Cryptogram", puzzles: cryptogram as CG[], slotOf: (p) => cgSlot(p as CG) },
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
+            { id: "freeatro", name: "Free-Atro", puzzles: freeatro as FA[], slotOf: (p) => faSlot(p as FA) },
           ],
-          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl])
+          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa])
         )
       );
     })();
@@ -186,7 +199,7 @@ export default function Contents() {
   }, []);
 
   const total =
-    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length;
+    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length + freeatro.length;
   const carryOn = mark ? `${ROUTE[mark.gameId] ?? "/"}?p=${encodeURIComponent(mark.puzzleId)}` : null;
   const going = nearest(badges);
   const here = mark ? entries?.find((e) => e.href === ROUTE[mark.gameId]) : null;

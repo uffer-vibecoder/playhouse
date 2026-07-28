@@ -21,6 +21,7 @@ const LABEL: Record<string, string> = {
   slide: "Sliding Tiles",
   cryptogram: "Cryptogram",
   blocks: "Colour Blocks",
+  freeatro: "Free-Atro",
 };
 
 /**
