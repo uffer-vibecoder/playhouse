@@ -812,7 +812,12 @@ footer{
 /* the overlap: a covered card shows only its corner */
 .fa-slide{display:block; margin-top:-40px}
 .fa-slide:first-child{margin-top:0}
-.fa-slide.lift{transform:translateX(6px)}
+.fa-slide.lift{transform:translateX(8px)}
+/* a card you can pick up from says so on hover; the ones buried under a broken
+   run stay inert, which is the quickest way to read what a column will give */
+.fa-slide.takeable{cursor:pointer}
+.fa-slide.takeable:hover .fa-card{border-color:var(--fill-text)}
+.fa-slide.takeable:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px; border-radius:8px}
 .fa-slide.inrun .fa-card{box-shadow:-2px 0 0 var(--fill)}
 
 .fa-card{

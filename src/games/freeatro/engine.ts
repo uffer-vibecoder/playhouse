@@ -321,6 +321,24 @@ export function runLength(column: number[]): number {
   return column.length ? n : 0;
 }
 
+/**
+ * How many cards a tap on this card would lift, or 0 if that is not a legal
+ * pick-up.
+ *
+ * Freecell is played by choosing *where in a column* to take from — the tail
+ * below the card you touched. The first version of this board only let you tap
+ * the column, which always took the longest ordered run it could, so a column
+ * ending 8♠ 7♥ 6♣ could not give you just the 6♣. That is not a preference,
+ * it is most of the game: which part of a run you move is the decision.
+ */
+export function liftFrom(t: Table, column: number, from: number): number {
+  const col = t.columns[column];
+  if (!col || from < 0 || from >= col.length) return 0;
+  for (let i = from + 1; i < col.length; i++) if (!stacks(col[i - 1], col[i])) return 0;
+  const count = col.length - from;
+  return count <= liftLimit(t) ? count : 0;
+}
+
 export const foundationReady = (t: Table, card: number) =>
   t.foundations[suitOf(card)] === rankOf(card) - 1;
 

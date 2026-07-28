@@ -9,7 +9,7 @@ import {
   initialState,
   isRed,
   isWon,
-  liftLimit,
+  liftFrom,
   name,
   targetFor,
   runLength,
@@ -124,9 +124,13 @@ export default function FreeAtroBoard({
             if (s.table.cells[index] === null) return s;
             setHeld({ pile: "cell", index, count: 1 });
           } else {
+            // Tapping the column itself takes only the bottom card. Which part
+            // of a run you move is the decision, so taking more than one is
+            // something you have to say by tapping the card you want to start
+            // from — see `takeFrom`.
             const col = s.table.columns[index];
             if (!col.length) return s;
-            setHeld({ pile: "column", index, count: Math.min(runLength(col), liftLimit(s.table)) });
+            setHeld({ pile: "column", index, count: 1 });
           }
           return s;
         }
@@ -144,19 +148,30 @@ export default function FreeAtroBoard({
           return next;
         }
 
-        // try the whole held run, then progressively less of it
-        for (let n = held.count; n >= 1; n--) {
-          const next = toColumn(s, { pile: held.pile, index: held.index }, index, n);
-          if (next !== s) {
-            setHeld(null);
-            return next;
-          }
-        }
-        return s;
+        // Exactly what was picked up, or nothing. It used to count down and
+        // take whatever fitted, so asking for three and getting one looked like
+        // the board had moved a card of its own accord.
+        const next = toColumn(s, { pile: held.pile, index: held.index }, index, held.count);
+        if (next !== s) setHeld(null);
+        return next;
       });
     },
     [held]
   );
+
+  /**
+   * Pick up from a particular card: that card and everything below it.
+   *
+   * Refuses rather than trimming — a pick-up that quietly gave you fewer cards
+   * than you touched would be worse than one that does nothing.
+   */
+  const takeFrom = useCallback((column: number, cardIndex: number) => {
+    setState((s) => {
+      const count = liftFrom(s.table, column, cardIndex);
+      if (count > 0) setHeld({ pile: "column", index: column, count });
+      return s;
+    });
+  }, []);
 
   const send = () => setState(autoplay);
   const back = () => {
@@ -282,9 +297,22 @@ export default function FreeAtroBoard({
                 <span
                   className={`fa-slide${on && n >= col.length - held!.count ? " lift" : ""}${
                     tail >= 3 && n >= col.length - tail ? " inrun" : ""
-                  }`}
+                  }${liftFrom(state.table, i, n) > 0 ? " takeable" : ""}`}
                   key={c}
-                  style={{ marginTop: n === 0 ? 0 : undefined }}
+                  role="button"
+                  tabIndex={liftFrom(state.table, i, n) > 0 ? 0 : -1}
+                  aria-label={`${name(c)}${
+                    liftFrom(state.table, i, n) > 1
+                      ? `, take ${liftFrom(state.table, i, n)} cards from here`
+                      : ""
+                  }`}
+                  onClick={(e) => {
+                    // the column behind is a drop target; a tap on a card is a
+                    // pick-up, so it must not also count as a drop
+                    if (held) return;
+                    e.stopPropagation();
+                    takeFrom(i, n);
+                  }}
                 >
                   {card(c)}
                 </span>
@@ -298,7 +326,11 @@ export default function FreeAtroBoard({
 
       <div className="status">
         <span>{state.moves} moves</span>
-        <span>{held ? `holding ${held.count}` : "tap a pile to pick up"}</span>
+        <span>
+          {held
+            ? `holding ${held.count} card${held.count === 1 ? "" : "s"}`
+            : "tap a card to pick up from there"}
+        </span>
       </div>
 
       {won && (

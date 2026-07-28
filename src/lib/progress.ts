@@ -343,6 +343,17 @@ export async function recordResult(
 export type Bookmark = { slot: string; gameId: string; puzzleId: string; updatedAt: string };
 
 /**
+ * Games that are runs rather than archives.
+ *
+ * A run has nothing to finish, so its saves are never marked solved and every
+ * one of them looks like something abandoned half-way. Left in, they take the
+ * landing page's bookmark permanently: the hero read "Start back on your last
+ * puzzle — Free-Atro No. 001-r1" and linked to `?p=run`, which no run game even
+ * reads, while the codeword actually left half-done sat behind it.
+ */
+const RUNS = new Set(["blockout", "freeatro"]);
+
+/**
  * The puzzle to offer to carry on with.
  *
  * Local only, deliberately. This is the answer to "what was I doing?", and the
@@ -359,6 +370,7 @@ export function lastUnfinished(): Bookmark | null {
     if (rec.solved) continue;
     const [gameId, puzzleId] = slot.split(":");
     if (!gameId || !puzzleId) continue;
+    if (RUNS.has(gameId)) continue;
     if (!best || rec.updatedAt > best.updatedAt) {
       best = { slot, gameId, puzzleId, updatedAt: rec.updatedAt };
     }

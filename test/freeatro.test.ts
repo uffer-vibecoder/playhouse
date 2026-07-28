@@ -11,6 +11,7 @@ import {
   isRed,
   isWon,
   liftLimit,
+  liftFrom,
   name,
   rankOf,
   newRun,
@@ -381,4 +382,33 @@ test("winning by accident does not clear a round", () => {
     `round one at ${targetFor(1)} is inside the range a careless win reaches`
   );
   assert.ok(targetFor(1) > carelessMedian * 1.35, "and comfortably past the median of one");
+});
+
+/* ── picking up from a card ───────────────────────────────────────────────── */
+
+test("a tap on a card takes that card and everything below it", () => {
+  const t = bare();
+  t.columns[0] = [12 + 26, 7, 13 + 6, 39 + 5]; // Kd, 8s, 7h, 6c
+  assert.equal(liftFrom(t, 0, 3), 1, "the six alone");
+  assert.equal(liftFrom(t, 0, 2), 2, "the seven and the six");
+  assert.equal(liftFrom(t, 0, 1), 3, "the whole run");
+  assert.equal(liftFrom(t, 0, 0), 0, "the king does not continue the run");
+});
+
+test("a pick-up refuses rather than trimming when the cells cannot carry it", () => {
+  const t = bare();
+  t.columns[0] = [7, 13 + 6, 39 + 5]; // 8s 7h 6c — an ordered three
+  // every cell taken *and* no empty column: an empty column doubles the lift,
+  // so leaving the other seven bare would have allowed 128 cards
+  t.cells = [0, 1, 2, 3];
+  for (let i = 1; i < COLUMNS; i++) t.columns[i] = [12];
+  assert.equal(liftLimit(t), 1, "nothing to stage a move through");
+  assert.equal(liftFrom(t, 0, 2), 1, "one still goes");
+  assert.equal(liftFrom(t, 0, 0), 0, "three does not, and is not quietly cut to one");
+});
+
+test("an empty column offers nothing to pick up", () => {
+  const t = bare();
+  assert.equal(liftFrom(t, 0, 0), 0);
+  assert.equal(liftFrom(t, 99, 0), 0, "and neither does a column that is not there");
 });
