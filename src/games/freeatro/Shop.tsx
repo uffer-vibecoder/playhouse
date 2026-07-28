@@ -35,7 +35,7 @@ export default function Shop({
         <div>
           <h1>{won ? "Round cleared" : "Round over"}</h1>
           <div className="titlerow">
-            <span className="strapline">
+            <span className="fa-versus">
               {won ? `${score} against ${target}` : `${score} — the target was ${target}`}
             </span>
           </div>
@@ -52,6 +52,13 @@ export default function Shop({
         <b>{run.coins}</b>
         <span>coin{run.coins === 1 ? "" : "s"} to spend</span>
       </div>
+
+      {run.scores.length > 1 && (
+        <div className="fa-sofar">
+          <span className="fa-sofarhead">This run</span>
+          <span className="fa-sofarlist">{run.scores.join(" · ")}</span>
+        </div>
+      )}
 
       <div className="fa-wares">
         {UPGRADES.map((u) => {

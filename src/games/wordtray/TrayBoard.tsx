@@ -9,6 +9,7 @@ import {
   initialState,
   isSolved,
   pick,
+  shuffle,
   spelling,
   submit,
   toSave,
@@ -50,7 +51,7 @@ export default function TrayBoard({
   const { stop: stopTimer, ms: elapsed } = timer;
   const restoring = restoredSlot !== slot;
 
-  const order = useMemo(() => trayOrder(puzzle), [puzzle]);
+  const order = useMemo(() => trayOrder(puzzle, state.shuffles), [puzzle, state.shuffles]);
   const grid = useMemo(() => cells(puzzle), [puzzle]);
   const filled = useMemo(() => {
     const on = new Set<string>();
@@ -230,6 +231,11 @@ export default function TrayBoard({
         </button>
         <button className="tool" onClick={() => setState(clearPick)} disabled={!state.picked.length}>
           Clear
+        </button>
+        {/* the same seven letters somewhere else — staring at one arrangement is
+            how you stop seeing the word that is in it */}
+        <button className="tool" onClick={() => setState(shuffle)} disabled={solved}>
+          Shuffle
         </button>
       </div>
 

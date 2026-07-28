@@ -14,10 +14,13 @@ import {
   name,
   rankOf,
   newRun,
+  bankRound,
+  advanceRound,
   purse,
   targetFor,
   buy,
   owned,
+  UPGRADES,
   cellsFor,
   baseMult,
   ROUND_RANKS,
@@ -298,4 +301,84 @@ test("a short round is won when every suit reaches its top rank, not the king", 
   assert.ok(isWon(s.table), "ace to eight is the whole suit here");
   s.table.foundations = [7, 7, 7, 6];
   assert.ok(!isWon(s.table));
+});
+
+/* ── banking a round ──────────────────────────────────────────────────────── */
+
+test("a round is banked when it ends, so the shop can spend what it earned", () => {
+  const run = newRun();
+  const score = targetFor(1) + 100;
+  const banked = bankRound(run, score);
+  assert.equal(banked.coins, purse(run, score, 1), "the payout is in the purse");
+  assert.deepEqual(banked.scores, [score]);
+  assert.equal(banked.round, 1, "and banking does not move the round on");
+});
+
+test("banking the same round twice pays it once", () => {
+  // the reload-while-shopping case: the board remounts on an already-won round
+  // and reports the win again
+  const once = bankRound(newRun(), 700);
+  const twice = bankRound(once, 700);
+  assert.equal(twice, once, "identity — nothing was added");
+  assert.equal(twice.coins, once.coins);
+});
+
+test("buying Deeper pockets cannot backdate the round already banked", () => {
+  const run = newRun();
+  const score = targetFor(1) + 200;
+  const banked = bankRound(run, score);
+  const after = buy({ ...banked, coins: banked.coins + 20 }, "purse");
+  // the payout is already in `coins`; owning the upgrade now must not re-run it
+  assert.equal(
+    bankRound(after, score).coins,
+    after.coins,
+    "the round is spent, and buying does not re-open it"
+  );
+});
+
+test("advancing moves the round and leaves the money alone", () => {
+  const banked = bankRound(newRun(), 700);
+  const next = advanceRound(banked);
+  assert.equal(next.round, 2);
+  assert.equal(next.coins, banked.coins);
+  assert.deepEqual(next.scores, banked.scores);
+});
+
+test("a round-one shop has something to spend, which it never used to", () => {
+  const cheapest = Math.min(...UPGRADES.map((u) => u.cost));
+
+  // Scraping in exactly on the target pays the flat three and buys nothing.
+  // That is deliberate rather than mean: the flat payment is for clearing, and
+  // a round you barely survived should not also fund an upgrade.
+  const scraped = bankRound(newRun(), targetFor(1));
+  assert.equal(scraped.coins, 3);
+  assert.ok(scraped.coins < cheapest, "a bare clear is not a shopping trip");
+
+  // A comfortable clear is, and this is the case that used to be impossible:
+  // the money was banked on the way *out* of the shop, so round one always
+  // opened with nothing whatever the score.
+  const played = bankRound(newRun(), targetFor(1) + 150);
+  assert.ok(
+    played.coins >= cheapest,
+    `${played.coins} coins should cover a ${cheapest}-coin upgrade`
+  );
+});
+
+/* ── the retuned curve ────────────────────────────────────────────────────── */
+
+test("the target climbs and never repeats", () => {
+  const targets = [1, 2, 3, 4, 5, 6, 7].map(targetFor);
+  for (let i = 1; i < targets.length; i++) assert.ok(targets[i] > targets[i - 1]);
+});
+
+test("winning by accident does not clear a round", () => {
+  // measured over all sixty deals by replaying the solver's route through this
+  // same scoring code — see scripts/tune-freeatro.mjs
+  const carelessMedian = 399;
+  const carelessUpperQuartile = 446;
+  assert.ok(
+    targetFor(1) > carelessUpperQuartile,
+    `round one at ${targetFor(1)} is inside the range a careless win reaches`
+  );
+  assert.ok(targetFor(1) > carelessMedian * 1.35, "and comfortably past the median of one");
 });

@@ -106,12 +106,34 @@ export const baseMult = (run: Run) => 1 + owned(run, "mult");
 /**
  * What this round has to beat.
  *
- * Every card comes home in a won round, so the chips are fixed — four suits of
- * 1+2+…+8 is 144. The target is therefore a statement about multiplier, and it
- * climbs: round one asks for an average of not quite two, and by round six you
- * cannot reach it without keeping runs standing while you dig.
+ * Every card comes home in a won round, so the chips are fixed at 144 — four
+ * suits of 1+2+…+8. A target is therefore a statement about multiplier, not
+ * about luck.
+ *
+ * **Measured, after the first curve was wrong by a factor of three.** That one
+ * was reasoned from an estimate of "about two on average" and set round one at
+ * 240; the first real game cleared it with 697. `scripts/tune-freeatro.mjs`
+ * replays the solver's route through this same scoring code to find what a
+ * *careless* win pays — a game won with no tableau care at all — across all
+ * sixty deals:
+ *
+ *     low 306 · q1 365 · median 399 · q3 446 · high 706 · mean 416
+ *
+ * So the old 240 sat *below* the median of winning by accident — round one
+ * cleared itself about half the time. 560 sits clear of the upper quartile,
+ * which is the point: **winning alone must not clear a round.**
+ *
+ * The step of 70 puts round six at 910, past anything a careless game reaches,
+ * so a run has to be carried by upgrades and by keeping runs standing while you
+ * dig. A single Head start is worth about +144, since it raises the multiplier
+ * under every one of those fixed chips.
+ *
+ * (An earlier measurement gave a median of 206. That was taken while a
+ * completed suit paid no multiplier at all — `f === 12`, the king, on a deck
+ * whose top card is an eight. Fixing that roughly doubled every score, which is
+ * why these numbers are the ones that count.)
  */
-export const targetFor = (round: number) => 240 + (round - 1) * 70;
+export const targetFor = (round: number) => 560 + (round - 1) * 70;
 
 /**
  * Coins for a finished round.
@@ -137,15 +159,36 @@ export function buy(run: Run, id: Upgrade): Run {
 export const dealFor = (run: Run, deals: Deal[]) =>
   deals[(run.offset + run.round - 1) % deals.length];
 
-/** Bank the round and move on. */
-export function nextRound(run: Run, score: number): Run {
+/**
+ * Bank a finished round: its coins and its score.
+ *
+ * Called the moment the round ends rather than when the shop closes, and that
+ * ordering is the whole point. Banking used to happen on the way *out* of the
+ * shop, so the shop that exists to spend a round's winnings always showed the
+ * balance from before that round — on round one, always zero, against a
+ * cheapest upgrade of four. The shop was unusable and said so twice on the same
+ * screen: "that is 12 coins in the purse" above "0 coins to spend".
+ *
+ * It also closes a second hole. `purse` reads `owned(run, "purse")`, so with
+ * banking after the shop, buying Deeper pockets retroactively raised the payout
+ * of a round that had already finished. Computing it on entry makes that
+ * impossible rather than merely unlikely.
+ *
+ * Idempotent, guarded on `scores.length`: a reload while the shop is open
+ * remounts the board on an already-won round and fires the win again, which
+ * would otherwise pay it out twice.
+ */
+export function bankRound(run: Run, score: number): Run {
+  if (run.scores.length >= run.round) return run;
   return {
     ...run,
-    round: run.round + 1,
     coins: run.coins + purse(run, score, run.round),
     scores: [...run.scores, score],
   };
 }
+
+/** Move on. The money is already in the purse. */
+export const advanceRound = (run: Run): Run => ({ ...run, round: run.round + 1 });
 
 export type Table = {
   /** eight piles, each bottom-to-top */
@@ -316,7 +359,10 @@ export function toFoundation(s: State, from: { pile: "column" | "cell"; index: n
   table.foundations[suitOf(card)] = rankOf(card);
 
   const chips = rankOf(card) + 1;
-  const finished = table.foundations.filter((f) => f === 12).length;
+  // `f === 12` — the king — until a short round deck made that never true, so
+  // finishing a suit quietly paid nothing at all. The top rank is the deck's,
+  // not the pack's.
+  const finished = table.foundations.filter((f) => f === table.ranks - 1).length;
   const score: Score = {
     ...s.score,
     // a completed suit is worth a permanent point of multiplier: the reward for
@@ -510,10 +556,28 @@ function distance(t: Table): number {
  * exception that strands somebody.
  */
 export function solve(start: Table, budget = 200_000): number | null {
+  return search(start, budget)?.depth ?? null;
+}
+
+/**
+ * The same search, keeping the route it took.
+ *
+ * The tables are built either way; this only stops discarding them. Used by the
+ * tuning script to score a win played with no regard for scoring at all, which
+ * is the floor a target has to sit above — a win alone must not clear a round.
+ */
+export function route(start: Table, budget = 200_000): Table[] | null {
+  return search(start, budget)?.path ?? null;
+}
+
+function search(
+  start: Table,
+  budget: number
+): { depth: number; path: Table[] } | null {
   const seen = new Set<string>();
 
   // a small binary heap, keyed on `distance`
-  const heap: { table: Table; depth: number; h: number }[] = [];
+  const heap: { table: Table; depth: number; h: number; path: Table[] }[] = [];
   const swap = (a: number, b: number) => { const t = heap[a]; heap[a] = heap[b]; heap[b] = t; };
   const up = (n: number) => {
     while (n > 0) {
@@ -535,8 +599,8 @@ export function solve(start: Table, budget = 200_000): number | null {
       n = m;
     }
   };
-  const add = (table: Table, depth: number) => {
-    heap.push({ table, depth, h: distance(table) + depth * 0.02 });
+  const add = (table: Table, depth: number, path: Table[]) => {
+    heap.push({ table, depth, h: distance(table) + depth * 0.02, path });
     up(heap.length - 1);
   };
   const take = () => {
@@ -546,19 +610,20 @@ export function solve(start: Table, budget = 200_000): number | null {
     return top;
   };
 
-  add(cloneTable(start), 0);
+  const first = cloneTable(start);
+  add(first, 0, [first]);
   seen.add(key(start));
   let nodes = 0;
 
   while (heap.length) {
     const cur = take();
-    if (isWon(cur.table)) return cur.depth;
+    if (isWon(cur.table)) return { depth: cur.depth, path: cur.path };
     if (++nodes > budget) return null;
     for (const child of successors(cur.table)) {
       const k = key(child);
       if (seen.has(k)) continue;
       seen.add(k);
-      add(child, cur.depth + 1);
+      add(child, cur.depth + 1, [...cur.path, child]);
     }
   }
   return null;

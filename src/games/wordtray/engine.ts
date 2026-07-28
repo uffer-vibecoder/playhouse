@@ -40,6 +40,14 @@ export type Puzzle = {
 export type State = {
   /** grid words found, in the order they were found */
   found: string[];
+  /**
+   * How many times the tray has been shuffled.
+   *
+   * The letters never change — only where they sit. Staring at the same seven
+   * in the same order is how you stop seeing the word that is in them, and
+   * rearranging is the oldest trick there is for getting unstuck.
+   */
+  shuffles: number;
   /** real words the tray makes that the grid does not hold */
   extras: string[];
   /** what is being spelled right now, as letter positions in the tray */
@@ -57,6 +65,7 @@ export function initialState(puzzle: Puzzle, restored?: Saved): State {
     found: (restored?.found ?? []).filter((w) => inGrid.has(w)),
     extras: (restored?.extras ?? []).filter((w) => spare.has(w)),
     picked: [],
+    shuffles: 0,
   };
 }
 
@@ -132,12 +141,21 @@ export function submit(puzzle: Puzzle, s: State): { state: State; outcome: Outco
   const word = spelling(puzzle, s);
   const outcome = judge(puzzle, s, word);
   const state: State = {
+    ...s,
     found: outcome === "found" ? [...s.found, word] : s.found,
     extras: outcome === "bonus" ? [...s.extras, word] : s.extras,
     picked: [],
   };
   return { state, outcome, word };
 }
+
+/**
+ * Rearrange the tray. The same seven letters, somewhere else.
+ *
+ * Clears whatever was part-spelled, because the positions it referred to have
+ * moved and leaving them would silently change the word being built.
+ */
+export const shuffle = (s: State): State => ({ ...s, shuffles: s.shuffles + 1, picked: [] });
 
 export const isSolved = (puzzle: Puzzle, s: State) =>
   puzzle.words.every((p) => s.found.includes(p.word));
@@ -150,8 +168,8 @@ export const isSolved = (puzzle: Puzzle, s: State) =>
  * the puzzle id so it is stable across reloads — a tray that rearranged itself
  * every time you looked would be exhausting.
  */
-export function trayOrder(puzzle: Puzzle): number[] {
-  let a = 0;
+export function trayOrder(puzzle: Puzzle, shuffles = 0): number[] {
+  let a = shuffles * 2654435761;
   for (const ch of puzzle.id) a = (Math.imul(a, 31) + ch.charCodeAt(0)) >>> 0;
   const order = puzzle.letters.split("").map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {

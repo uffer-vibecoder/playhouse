@@ -826,6 +826,12 @@ footer{
 .fa-suit{font-size:13px}
 
 .fa-shop{margin-top:0}
+/* `.strapline` capitalises every word, which is right for a two-word game
+   strapline and wrong for "697 against 240" */
+.fa-versus{font-size:11px; letter-spacing:2.4px; color:var(--muted)}
+.fa-sofar{display:flex; align-items:baseline; gap:10px; margin:0 0 14px; font-size:12px}
+.fa-sofarhead{font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted)}
+.fa-sofarlist{color:var(--body); font-variant-numeric:tabular-nums}
 .fa-purse{
   display:flex; align-items:baseline; gap:8px; margin:12px 0;
   padding:12px 16px; border:2px solid var(--ink); border-radius:12px; background:var(--fill-tint);

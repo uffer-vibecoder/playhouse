@@ -5,10 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import FreeAtroBoard from "./FreeAtroBoard";
 import Shop from "./Shop";
 import {
+  advanceRound,
+  bankRound,
+  buy,
   dealFor,
   newRun,
-  nextRound,
-  buy,
+  targetFor,
   type Deal,
   type Run,
   type Upgrade,
@@ -53,12 +55,36 @@ export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
     void saveProgress<Run>(RUN_SLOT, GAME_ID, next, false);
   }, []);
 
-  const onWon = useCallback((score: number) => setJustScored(score), []);
+  /**
+   * The round is over: bank it, then show the shop.
+   *
+   * Banking here rather than on the way out of the shop is what lets the shop
+   * spend the money the round just earned. Guarded on `justScored` so a
+   * re-render cannot re-enter it, and `bankRound` is itself idempotent for the
+   * reload-while-shopping case.
+   */
+  const onWon = useCallback(
+    (score: number) => {
+      setJustScored((already) => {
+        if (already !== null) return already;
+        setRun((r) => {
+          if (!r) return r;
+          const banked = bankRound(r, score);
+          void saveProgress<Run>(RUN_SLOT, GAME_ID, banked, false);
+          return banked;
+        });
+        return score;
+      });
+    },
+    []
+  );
 
   const carryOn = () => {
     if (!run || justScored === null) return;
-    const cleared = justScored >= 240 + (run.round - 1) * 70;
-    keep(cleared ? nextRound(run, justScored) : newRun(Math.floor(Math.random() * deals.length)));
+    // `targetFor` rather than the formula written out again: they matched, which
+    // is exactly what makes a duplicate dangerous rather than obviously wrong
+    const cleared = justScored >= targetFor(run.round);
+    keep(cleared ? advanceRound(run) : newRun(Math.floor(Math.random() * deals.length)));
     setJustScored(null);
   };
 
