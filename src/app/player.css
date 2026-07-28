@@ -684,7 +684,7 @@ footer{
 /* what is being spelled, or what just happened to it */
 .wt-say{
   /* in the middle of the ring, where you are already looking */
-  position:absolute; inset:0; display:grid; place-items:center;
+  position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
   padding:0 54px; min-height:0; margin:0; text-align:center;
   font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:2px;
   text-transform:uppercase; color:var(--ink); overflow-wrap:anywhere;
@@ -703,6 +703,11 @@ footer{
 }
 .wt-seat{
   position:absolute; inset:0; display:grid; place-items:center;
+  /* A seat is a full ring-sized box moved into place, so all seven of them lie
+     on top of one another. Without this the last one drawn covers the letters
+     under it and those letters cannot be tapped at all — only the button itself
+     should ever catch a press. */
+  pointer-events:none;
   /* out to the rim, then back upright.
      The radius is a percentage of the ring rather than a pixel figure so the
      geometry is the same at every size — which is what lets the trace below be
@@ -723,6 +728,7 @@ footer{
 .wt-trace circle{fill:var(--fill-text); opacity:.5}
 .wt-tray{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:6px 0 10px}
 .wt-letter{
+  pointer-events:auto;
   width:52px; height:52px; margin:0; padding:0;
   border:2px solid var(--ink); border-radius:50%; background:#FFFFFF;
   font-family:var(--display); font-weight:600; font-size:23px; color:var(--ink);
