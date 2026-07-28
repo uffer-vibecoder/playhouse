@@ -503,6 +503,71 @@ export function autoplay(s: State): State {
 
 export const isWon = (t: Table) => t.foundations.every((f) => f === t.ranks - 1);
 
+/**
+ * Is the round already decided?
+ *
+ * True when every remaining card can be sent home by rank with no tableau work
+ * left to do — the point where a Freecell game stops being a puzzle and becomes
+ * twenty more clicks. Tested by actually doing it on a copy rather than by a
+ * rule of thumb, because the rules of thumb ("every column descending") reject
+ * boards that are plainly finished.
+ */
+export function canFinish(t: Table): boolean {
+  const table = cloneTable(t);
+  for (;;) {
+    let moved = false;
+    for (let i = 0; i < table.cells.length; i++) {
+      const c = table.cells[i];
+      if (c !== null && foundationReady(table, c)) {
+        table.cells[i] = null;
+        table.foundations[suitOf(c)] = rankOf(c);
+        moved = true;
+      }
+    }
+    for (let i = 0; i < COLUMNS; i++) {
+      const c = table.columns[i].at(-1);
+      if (c !== undefined && foundationReady(table, c)) {
+        table.columns[i].pop();
+        table.foundations[suitOf(c)] = rankOf(c);
+        moved = true;
+      }
+    }
+    if (!moved) return isWon(table);
+  }
+}
+
+/**
+ * Play out a decided board.
+ *
+ * Unlike `autoplay`, which only sends up what can never be needed below, this
+ * sends everything — it is only offered when `canFinish` says the game is over
+ * bar the clicking, and it scores every card exactly as a hand would.
+ */
+export function finish(s: State): State {
+  let out = s;
+  for (;;) {
+    let moved = false;
+    for (let i = 0; i < out.table.cells.length; i++) {
+      const c = out.table.cells[i];
+      if (c !== null && foundationReady(out.table, c)) {
+        out = toFoundation(out, { pile: "cell", index: i });
+        moved = true;
+        break;
+      }
+    }
+    if (moved) continue;
+    for (let i = 0; i < COLUMNS; i++) {
+      const c = out.table.columns[i].at(-1);
+      if (c !== undefined && foundationReady(out.table, c)) {
+        out = toFoundation(out, { pile: "column", index: i });
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) return out;
+  }
+}
+
 /* ── proving a deal ───────────────────────────────────────────────────────── */
 
 function key(t: Table): string {

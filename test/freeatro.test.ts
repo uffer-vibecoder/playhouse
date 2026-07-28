@@ -4,6 +4,8 @@ import {
   CELLS,
   COLUMNS,
   autoplay,
+  canFinish,
+  finish,
   cloneTable,
   deal,
   foundationReady,
@@ -411,4 +413,42 @@ test("an empty column offers nothing to pick up", () => {
   const t = bare();
   assert.equal(liftFrom(t, 0, 0), 0);
   assert.equal(liftFrom(t, 99, 0), 0, "and neither does a column that is not there");
+});
+
+/* ── finishing a decided board ────────────────────────────────────────────── */
+
+test("a board that is over bar the clicking says so", () => {
+  const t = bare();
+  t.foundations = [5, 5, 5, 5];
+  // each column holds the rest of one suit, in order, nothing in the way
+  // bottom to top, so the card the foundation wants next is the one on top
+  for (let suit = 0; suit < 4; suit++) t.columns[suit] = [suit * 13 + 7, suit * 13 + 6];
+  assert.ok(canFinish(t), "every card can go home by rank from here");
+});
+
+test("a board with work still to do does not", () => {
+  const t = bare();
+  t.foundations = [-1, -1, -1, -1];
+  t.columns[0] = [7, 0]; // the ace is under the eight
+  assert.ok(!canFinish(t));
+});
+
+test("finishing plays it out and scores every card on the way", () => {
+  const s = initialState(DEAL, RUN);
+  s.table.columns = Array.from({ length: COLUMNS }, () => []);
+  s.table.foundations = [6, 6, 6, 6];
+  for (let suit = 0; suit < 4; suit++) s.table.columns[suit] = [suit * 13 + 7];
+  assert.ok(canFinish(s.table));
+
+  const done = finish(s);
+  assert.ok(isWon(done.table), "the board is clear");
+  assert.ok(done.score.total > s.score.total, "and the last four cards were scored");
+  assert.equal(done.moves, s.moves + 4, "one move each, as a hand would play them");
+});
+
+test("finishing an already-won board does nothing", () => {
+  const s = initialState(DEAL, RUN);
+  s.table.columns = Array.from({ length: COLUMNS }, () => []);
+  s.table.foundations = [7, 7, 7, 7];
+  assert.equal(finish(s), s);
 });

@@ -39,6 +39,8 @@ export default function TrayBoard({
   const [state, setState] = useState<State>(() => initialState(puzzle));
   const [restoredSlot, setRestoredSlot] = useState<string | null>(null);
   const [say, setSay] = useState<{ text: string; kind: Outcome } | null>(null);
+  /** the word that just landed, so its letters can arrive one after another */
+  const [landing, setLanding] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const solvedOnce = useRef(false);
@@ -102,6 +104,7 @@ export default function TrayBoard({
   const send = useCallback(() => {
     setState((s) => {
       const { state: next, outcome, word } = submit(puzzle, s);
+      if (outcome === "found") setLanding(word);
       setSay(
         outcome === "found" ? { text: word, kind: outcome }
         : outcome === "bonus" ? { text: `${word} — a bonus`, kind: outcome }
@@ -118,6 +121,12 @@ export default function TrayBoard({
     const id = setTimeout(() => setSay(null), 1600);
     return () => clearTimeout(id);
   }, [say]);
+
+  useEffect(() => {
+    if (!landing) return;
+    const id = setTimeout(() => setLanding(null), 900);
+    return () => clearTimeout(id);
+  }, [landing]);
 
   /* the physical keyboard, for anyone who would rather type than tap */
   useEffect(() => {
@@ -193,8 +202,24 @@ export default function TrayBoard({
           const cell = grid.find((c) => c.x === x && c.y === y);
           if (!cell) return <span className="wt-void" key={i} aria-hidden="true" />;
           const on = filled.has(`${x},${y}`);
+          // how far along the landing word this cell sits, so the letters
+          // arrive left to right rather than all at once
+          const place = landing
+            ? puzzle.words
+                .filter((p) => p.word === landing)
+                .map((p) => cellsOf(p).indexOf(`${x},${y}`))
+                .find((n) => n >= 0)
+            : undefined;
           return (
-            <span className={"wt-cell" + (on ? " on" : "")} key={i}>
+            <span
+              className={"wt-cell" + (on ? " on" : "") + (place !== undefined ? " landing" : "")}
+              key={i}
+              style={
+                place !== undefined
+                  ? ({ "--land-delay": `${place * 55}ms` } as React.CSSProperties)
+                  : undefined
+              }
+            >
               {on ? cell.letter : ""}
             </span>
           );

@@ -6,6 +6,8 @@ import {
   COLUMNS,
   SUITS,
   autoplay,
+  canFinish,
+  finish,
   initialState,
   isRed,
   isWon,
@@ -96,7 +98,9 @@ export default function FreeAtroBoard({
         { score: state.score.total, moves: state.moves, round: run.round, target },
         elapsed
       );
-      onWon(state.score.total);
+      // `onWon` swaps this board for the shop, so it waits for the celebration
+      // to finish. It used to fire immediately, which unmounted the board mid
+      // first frame — the celebration was there all along and never once seen.
     }
     if (!won) wonOnce.current = false;
   }, [won, restoring, slot, state.score.total, state.moves, run.round, target, stopTimer, elapsed, onWon]);
@@ -174,6 +178,8 @@ export default function FreeAtroBoard({
   }, []);
 
   const send = () => setState(autoplay);
+  /** Only offered once the board is decided — see `canFinish`. */
+  const decided = !won && canFinish(state.table);
   const back = () => {
     setHeld(null);
     setState(undoMove);
@@ -322,7 +328,14 @@ export default function FreeAtroBoard({
         })}
       </div>
 
-      {celebrate && <Celebration onDone={() => setCelebrate(false)} />}
+      {celebrate && (
+        <Celebration
+          onDone={() => {
+            setCelebrate(false);
+            onWon(state.score.total);
+          }}
+        />
+      )}
 
       <div className="status">
         <span>{state.moves} moves</span>
@@ -349,6 +362,11 @@ export default function FreeAtroBoard({
         <button className="tool" onClick={send}>
           Send home
         </button>
+        {decided && (
+          <button className="tool fa-finish" onClick={() => setState(finish)}>
+            Finish it
+          </button>
+        )}
         <button className="tool" onClick={() => setState(initialState(deal, run))}>
           Start over
         </button>
