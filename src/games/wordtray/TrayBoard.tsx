@@ -28,8 +28,14 @@ import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type Sa
 import Celebration from "@/components/Celebration";
 import TimerButton from "@/components/TimerButton";
 import { useTimer } from "@/lib/use-timer";
+import { makePref } from "@/lib/use-pref";
 
 const GAME_ID = "wordtray";
+
+/** Ring or row — the ring is the default, the row is for anyone who found it
+ *  harder to read rather than more interesting. */
+const LAYOUTS = ["ring", "row"] as const;
+const useLayout = makePref<(typeof LAYOUTS)[number]>("wordtray:layout", "ring", LAYOUTS);
 
 export default function TrayBoard({
   puzzle,
@@ -46,6 +52,7 @@ export default function TrayBoard({
   /** the word that just landed, so its letters can arrive one after another */
   const [landing, setLanding] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [layout, setLayout] = useLayout();
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const solvedOnce = useRef(false);
 
@@ -178,6 +185,24 @@ export default function TrayBoard({
   }, [order, puzzle.letters, send]);
 
   const word = spelling(puzzle, state);
+  const ring = layout === "ring";
+
+  /** One letter of the tray. The same button either way round — only where it
+   *  is put changes, so the two layouts cannot drift apart. */
+  const letter = (n: number) => {
+    const used = state.picked.includes(n);
+    return (
+      <button
+        key={n}
+        className={"wt-letter" + (used ? " used" : "")}
+        onClick={() => setState((s) => pick(s, n))}
+        disabled={used || solved}
+        aria-label={puzzle.letters[n]}
+      >
+        {puzzle.letters[n]}
+      </button>
+    );
+  };
 
   /** where each tapped letter sits in the ring, in the order it was tapped */
   const trace = useMemo(() => {
@@ -281,37 +306,54 @@ export default function TrayBoard({
           looking. Each seat is rotated into place and the letter inside is
           rotated back upright — the float animation then composes on top rather
           than fighting the placement. */}
-      <div className="wt-ring" style={{ "--n": order.length } as React.CSSProperties}>
-        {/* The trace, first so it sits under the letters and the word.
-            Seat i is at 38% of the ring from the middle, turned i/n of the way
-            round from the top — the same numbers the CSS uses, which is why the
-            radius there is a percentage and not a pixel count. */}
-        {trace.length > 1 && (
-          <svg className="wt-trace" viewBox="0 0 100 100" aria-hidden="true">
-            <polyline points={trace.map(([x, y]) => `${x},${y}`).join(" ")} />
-            {trace.map(([x, y], i) => (
-              <circle key={i} cx={x} cy={y} r={1.1} />
-            ))}
-          </svg>
-        )}
-        <div className={"wt-say" + (say ? ` ${say.kind}` : "")} role="status">
-          {say?.text ?? (word || "")}
-        </div>
-        {order.map((n, i) => {
-          const used = state.picked.includes(n);
-          return (
+      {ring ? (
+        <div className="wt-ring" style={{ "--n": order.length } as React.CSSProperties}>
+          {/* The trace, first so it sits under the letters and the word.
+              Seat i is at 38% of the ring from the middle, turned i/n of the way
+              round from the top — the same numbers the CSS uses, which is why the
+              radius there is a percentage and not a pixel count. */}
+          {trace.length > 1 && (
+            <svg className="wt-trace" viewBox="0 0 100 100" aria-hidden="true">
+              <polyline points={trace.map(([x, y]) => `${x},${y}`).join(" ")} />
+              {trace.map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r={1.1} />
+              ))}
+            </svg>
+          )}
+          <div className={"wt-say in-ring" + (say ? ` ${say.kind}` : "")} role="status">
+            {say?.text ?? (word || "")}
+          </div>
+          {order.map((n, i) => (
             <span className="wt-seat" key={n} style={{ "--i": i } as React.CSSProperties}>
-              <button
-                className={"wt-letter" + (used ? " used" : "")}
-                onClick={() => setState((s) => pick(s, n))}
-                disabled={used || solved}
-                aria-label={puzzle.letters[n]}
-              >
-                {puzzle.letters[n]}
-              </button>
+              {letter(n)}
             </span>
-          );
-        })}
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* In a row the word cannot sit in the middle of anything, so it goes
+              above the letters — still between the grid and the tray, which is
+              where the eye already is. There is no trace here: a line through a
+              row is a zigzag along it, which says nothing the order of the
+              letters above does not already say. */}
+          <div className={"wt-say flat" + (say ? ` ${say.kind}` : "")} role="status">
+            {say?.text ?? (word || " ")}
+          </div>
+          <div className="wt-tray">{order.map((n) => letter(n))}</div>
+        </>
+      )}
+
+      <div className="wt-layout" role="group" aria-label="How the letters are laid out">
+        {LAYOUTS.map((v) => (
+          <button
+            key={v}
+            className="wt-layoutopt"
+            aria-pressed={layout === v}
+            onClick={() => setLayout(v)}
+          >
+            {v === "ring" ? "Ring" : "Row"}
+          </button>
+        ))}
       </div>
 
       <div className="wt-actions">

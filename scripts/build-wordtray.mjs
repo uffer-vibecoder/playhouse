@@ -178,8 +178,13 @@ function fill(pool, want, maxSide) {
 
 import { writeFileSync, existsSync } from "node:fs";
 
-const OUT = "src/data/wordtray.json";
+/* WT_OUT lets a tuning run write somewhere harmless — the real archive is
+   append-only and a measurement must not touch it. */
+const OUT = process.env.WT_OUT ?? "src/data/wordtray.json";
 const WANT = Number(process.argv[2] ?? 60);
+/** how many words to pack into a grid, and how wide the grid may get */
+const WORDS = Number(process.argv[3] ?? 8);
+const SIDE = Number(process.argv[4] ?? 9);
 
 const existing = existsSync(OUT) ? JSON.parse(readFileSync(OUT, "utf8")) : [];
 const out = [...existing];
@@ -200,7 +205,7 @@ for (const root of roots) {
   const pool = wordsFor(root);
   if (pool.length < 10) { thin++; continue; }
 
-  const { cells, placed } = fill(pool, 8, 9);
+  const { cells, placed } = fill(pool, WORDS, SIDE);
   if (placed.length < 6) { unfilled++; continue; }
 
   // shift the grid so it starts at 0,0 and ships as small as it is
@@ -231,6 +236,7 @@ const made = out.length - startAt;
 const mean = (xs) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
 console.log(`${made} new trays, ${out.length} in the archive`);
 console.log(`  tried ${tried}: ${thin} too few words, ${unfilled} would not pack`);
+console.log(`  asked for ${WORDS} words in at most ${SIDE}×${SIDE}`);
 console.log(`  grid words ${Math.min(...counts)}–${Math.max(...counts)} (mean ${mean(counts)}), bonus words mean ${mean(bonuses)}`);
 
 /* Every grid word has to be spellable from its own tray, and every crossing has

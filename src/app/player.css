@@ -682,13 +682,18 @@ footer{
 }
 
 /* what is being spelled, or what just happened to it */
+/* the typography of what is being spelled, wherever it is put */
 .wt-say{
-  /* in the middle of the ring, where you are already looking */
-  position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
-  padding:0 54px; min-height:0; margin:0; text-align:center;
+  display:grid; place-items:center; pointer-events:none;
+  margin:0; text-align:center;
   font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:2px;
   text-transform:uppercase; color:var(--ink); overflow-wrap:anywhere;
 }
+/* in the middle of the ring, where you are already looking */
+.wt-say.in-ring{position:absolute; inset:0; padding:0 54px; min-height:0}
+/* above a row, which has no middle to sit in. The min-height holds the space
+   open so the tray does not jump every time a word clears. */
+.wt-say.flat{min-height:30px; margin:14px 0 2px}
 .wt-say.found{color:var(--fill-text)}
 .wt-say.bonus{color:var(--accent-text)}
 /* "again" and "no" are told apart by weight rather than by red: this is a game
@@ -738,7 +743,19 @@ footer{
 .wt-letter.used{background:var(--tile); color:var(--muted); border-color:var(--underline)}
 .wt-letter:disabled{cursor:default}
 
-.wt-actions{display:flex; justify-content:center; gap:8px; margin-bottom:12px}
+/* Ring or row. Small and quiet — it is a preference, not a move, and it should
+   not compete with the buttons that actually play the game. */
+.wt-layout{display:flex; justify-content:center; gap:2px; margin:0 0 12px}
+.wt-layoutopt{
+  margin:0; padding:4px 12px; border:0; background:none; cursor:pointer;
+  font-family:var(--ui); font-size:10px; font-weight:700; letter-spacing:1.4px;
+  text-transform:uppercase; color:var(--muted); border-bottom:2px solid transparent;
+}
+.wt-layoutopt[aria-pressed="true"]{color:var(--ink); border-bottom-color:var(--ink)}
+
+/* Five buttons now that Hint is here, which is more than a narrow screen fits
+   in one line — so it wraps rather than running off the edge. */
+.wt-actions{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:12px}
 .wt-actions .tool{flex:0 0 auto; min-width:88px}
 
 .wt-bonus{
@@ -752,7 +769,8 @@ footer{
   .wt-cell,.wt-void{min-width:0}
   .wt-cell{font-size:13px; border-width:1.5px}
   .wt-letter{width:46px; height:46px; font-size:20px}
-  .wt-say{padding:0 48px; font-size:17px}
+  .wt-say{font-size:17px}
+  .wt-say.in-ring{padding:0 48px}
 }
 
 /* ── block out! ──────────────────────────────────────────────────────────────
