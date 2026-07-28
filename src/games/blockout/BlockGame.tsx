@@ -29,11 +29,17 @@ export default function BlockGame() {
     loadProgress<Which>(RUN_SLOT).then((rec) => {
       if (!alive) return;
       const stored = rec?.entries;
-      setWhich(
-        stored && typeof stored.run === "number"
-          ? stored
-          : { run: 1, seed: Math.floor(Math.random() * 2 ** 31) }
-      );
+      if (stored && typeof stored.run === "number") {
+        setWhich(stored);
+        return;
+      }
+      // A first run has to be written down as soon as it is dealt. It was not,
+      // and the seed is random, so every reload quietly began a different run
+      // and abandoned the board — while the footer went on saying the game was
+      // saved on this device.
+      const fresh = { run: 1, seed: Math.floor(Math.random() * 2 ** 31) };
+      setWhich(fresh);
+      void saveProgress<Which>(RUN_SLOT, GAME_ID, fresh, false);
     });
     return () => { alive = false; };
   }, []);

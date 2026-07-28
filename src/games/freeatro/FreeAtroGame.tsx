@@ -34,13 +34,16 @@ export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
     loadProgress<Run>(RUN_SLOT).then((rec) => {
       if (!alive) return;
       const stored = rec?.entries;
-      setRun(
-        stored && typeof stored.round === "number"
-          ? stored
-          : // where in the archive this run begins; every run is a different
-            // sequence of deals, each one reproducible from its own offset
-            newRun(Math.floor(Math.random() * deals.length))
-      );
+      if (stored && typeof stored.round === "number") {
+        setRun(stored);
+        return;
+      }
+      // Written down as it is dealt, not when it is first changed. The offset
+      // is random, so a run that was only held in memory dealt different rounds
+      // after every reload — the same bug Block Out! had.
+      const fresh = newRun(Math.floor(Math.random() * deals.length));
+      setRun(fresh);
+      void saveProgress<Run>(RUN_SLOT, GAME_ID, fresh, false);
     });
     return () => { alive = false; };
   }, [deals.length]);

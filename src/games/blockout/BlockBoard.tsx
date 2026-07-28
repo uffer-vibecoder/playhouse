@@ -162,7 +162,24 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
     window.addEventListener("pointerup", finish);
   };
 
-  const clearing = new Set(state.lastCleared);
+  /**
+   * How each cleared cell should leave.
+   *
+   * A row sweeps sideways and a column sweeps downwards — the direction the
+   * line ran — and each cell waits a little longer than the one before it, so
+   * the line reads as being pushed out rather than as switching off. A cell
+   * caught in both a row and a column takes the row, arbitrarily but
+   * consistently.
+   */
+  const sweeping = useMemo(() => {
+    const out = new Map<number, { axis: "row" | "col"; delay: number }>();
+    for (const y of state.lastRows)
+      for (let x = 0; x < SIZE; x++) out.set(at(x, y), { axis: "row", delay: x * 22 });
+    for (const x of state.lastCols)
+      for (let y = 0; y < SIZE; y++)
+        if (!out.has(at(x, y))) out.set(at(x, y), { axis: "col", delay: y * 22 });
+    return out;
+  }, [state.lastRows, state.lastCols]);
 
   return (
     <div className="sheet">
@@ -220,8 +237,13 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
                   filled ? `hue-${filled}` : "",
                   ghost ? (preview.ok ? " ghost" : " nogo") : "",
                   willClear ? " willclear" : "",
-                  clearing.has(i) ? " justwent" : "",
+                  sweeping.has(i) ? ` justwent ${sweeping.get(i)!.axis}` : "",
                 ].join(" ")}
+                style={
+                  sweeping.has(i)
+                    ? ({ "--sweep-delay": `${sweeping.get(i)!.delay}ms` } as React.CSSProperties)
+                    : undefined
+                }
                 onPointerEnter={() => holding !== null && setOver({ x, y })}
                 onFocus={() => holding !== null && setOver({ x, y })}
                 onClick={() => {

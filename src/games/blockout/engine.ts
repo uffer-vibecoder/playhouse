@@ -92,6 +92,16 @@ export type State = {
   over: boolean;
   /** cells cleared by the last placement, for the board to animate */
   lastCleared: number[];
+  /**
+   * Which rows and columns went, so the board can sweep them out the way they
+   * were filled rather than blinking them away.
+   *
+   * The direction has to come from here: by the time the board renders, the
+   * cells are already empty and there is nothing left in the grid to say
+   * whether a row or a column emptied them.
+   */
+  lastRows: number[];
+  lastCols: number[];
 };
 
 export type Saved = { grid: number[]; tray: number[]; score: number; streak: number; placed: number };
@@ -143,6 +153,8 @@ export function initialState(seed: number, restored?: Saved): State {
       // three pieces on offer and nowhere on the board to put any of them.
       over: !tray.some((p) => fitsAnywhere(grid, SHAPES[p.shapeIndex].shape)),
       lastCleared: [],
+      lastRows: [],
+      lastCols: [],
     };
   }
   return {
@@ -154,6 +166,8 @@ export function initialState(seed: number, restored?: Saved): State {
     placed: 0,
     over: false,
     lastCleared: [],
+    lastRows: [],
+    lastCols: [],
   };
 }
 
@@ -258,7 +272,18 @@ export function place(s: State, trayIndex: number, x: number, y: number): State 
 
   const over = !refilled.some((p) => !p.used && fitsAnywhere(grid, SHAPES[p.shapeIndex].shape));
 
-  return { seed: s.seed, grid, tray: refilled, score, streak, placed, over, lastCleared: cleared };
+  return {
+    seed: s.seed,
+    grid,
+    tray: refilled,
+    score,
+    streak,
+    placed,
+    over,
+    lastCleared: cleared,
+    lastRows: rows,
+    lastCols: cols,
+  };
 }
 
 export const isOver = (s: State) => s.over;
