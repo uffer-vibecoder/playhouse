@@ -2,7 +2,26 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
-import { claimInvite, createInvite, loadLink, pendingInvite, unlink, type Link } from "@/lib/link";
+import {
+  backfillResults,
+  claimInvite,
+  createInvite,
+  loadLink,
+  loadPartnerFinishes,
+  pendingInvite,
+  unlink,
+  type Link,
+  type PartnerFinish,
+} from "@/lib/link";
+
+const LABEL: Record<string, string> = {
+  codeword: "Codeword",
+  wordgame: "Word Guessing",
+  solveforx: "Solve for X",
+  slide: "Sliding Tiles",
+  cryptogram: "Cryptogram",
+  blocks: "Colour Blocks",
+};
 
 /**
  * Linking up with one other person.
@@ -24,6 +43,7 @@ export default function Together() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [theirs, setTheirs] = useState<PartnerFinish[] | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = getSupabase();
@@ -32,8 +52,13 @@ export default function Together() {
     const on = !!data.session?.user;
     setSignedIn(on);
     if (!on) return;
-    setLink(await loadLink());
+    // Fill in results for anything finished before the results table existed,
+    // or a partner who has played for weeks reads as having never played.
+    await backfillResults();
+    const l = await loadLink();
+    setLink(l);
     setCode(await pendingInvite());
+    setTheirs(l ? await loadPartnerFinishes(l.partner) : null);
   }, []);
 
   useEffect(() => {
@@ -126,6 +151,53 @@ export default function Together() {
           <button className="tool" onClick={drop} disabled={busy}>
             Unlink
           </button>
+        </div>
+      )}
+
+      {signedIn && link && theirs && (
+        <div className="theirs">
+          {theirs.length === 0 ? (
+            <p className="nothingyet">
+              Nothing finished yet — or nothing since results started being kept. Their next
+              finish will show here.
+            </p>
+          ) : (
+            <>
+              <div className="theirscounts">
+                {Object.entries(
+                  theirs.reduce<Record<string, number>>((n, f) => {
+                    n[f.gameId] = (n[f.gameId] ?? 0) + 1;
+                    return n;
+                  }, {})
+                )
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([game, n]) => (
+                    <span className="theirscount" key={game}>
+                      <b>{n}</b> {LABEL[game] ?? game}
+                    </span>
+                  ))}
+              </div>
+              <ul className="theirslist">
+                {theirs.slice(0, 6).map((f) => {
+                  const [game, id] = f.slot.split(":");
+                  return (
+                    <li key={f.slot}>
+                      <span>{LABEL[game] ?? game} {id?.replace(/^[A-Z]+-/, "No. ")}</span>
+                      {/* an em dash, because timing is opt-in and almost nothing
+                          carries one — see the record's first rule */}
+                      <span className="recsub">
+                        {new Date(f.at).toLocaleDateString()} · —
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="recsub">
+                Finished puzzles only. There is no way to see what someone is part-way through,
+                and no way to see what they answered.
+              </p>
+            </>
+          )}
         </div>
       )}
 

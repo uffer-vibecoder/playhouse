@@ -30,6 +30,8 @@ import {
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 import Scratch from "./Scratch";
 import Calculator from "./Calculator";
 import { SITE } from "@/lib/site";
@@ -63,6 +65,9 @@ export default function SolveBoard({
   const [saved, setSaved] = useState<SaveOutcome | null>(null);
   const [checked, setChecked] = useState(false);
   const [copied, setCopied] = useState(false);
+  /** How far the check has swept down the page, and what it found. */
+  const [sweep, setSweep] = useState(0);
+  const [tally, setTally] = useState<{ right: number; answered: number } | null>(null);
   const solvedOnce = useRef(false);
 
   // The seed is the whole puzzle, so it is what the fingerprint guards: reuse
@@ -71,6 +76,9 @@ export default function SolveBoard({
     () => slotKey(GAME_ID, puzzle.id, fingerprint([[puzzle.seed]], String(puzzle.seed))),
     [puzzle]
   );
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
+
   const restoring = restoredSlot !== slot;
 
   /* restore */
@@ -104,6 +112,7 @@ export default function SolveBoard({
   useEffect(() => {
     if (solved && !solvedOnce.current && !restoring) {
       solvedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* The record's copy: facts about the attempt, never the answer. The
@@ -112,10 +121,10 @@ export default function SolveBoard({
       void recordResult(slot, GAME_ID, {
         score: state.firstScore ?? rightCount(problems, state),
         of: problems.length,
-      });
+      }, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, problems, state]);
+  }, [solved, restoring, onSolved, slot, problems, state, stopTimer, elapsed]);
 
   /* marks fade rather than lingering over a row being corrected */
   useEffect(() => {
@@ -175,9 +184,24 @@ export default function SolveBoard({
     return () => window.removeEventListener("keydown", onKey);
   }, [edit]);
 
+  /**
+   * Check, with something happening.
+   *
+   * It used to mark the wrong rows and nothing else — which is the information,
+   * but it arrives silently and reads as though the button might not have done
+   * anything. Now the right rows land one after another rather than all at once,
+   * and a line says the count. The stagger is 60ms a row: enough to read as a
+   * sweep down the page, short enough that ten rows are done in half a second.
+   */
   const runCheck = () => {
     setChecked(true);
     setState((s) => check(problems, s));
+    const right = problems.filter((p, i) => isRight(p, state.answers[i])).length;
+    const answered = state.answers.filter((a) => a.trim() !== "").length;
+    setTally({ right, answered });
+    setSweep(0);
+    problems.forEach((_, i) => setTimeout(() => setSweep(i + 1), 60 * (i + 1)));
+    setTimeout(() => setTally(null), 4000);
   };
 
   const share = async () => {
@@ -234,6 +258,7 @@ export default function SolveBoard({
               "sx-row",
               state.wrong.has(i) ? "wrong" : "",
               checked && isRight(p, state.answers[i]) ? "right" : "",
+              checked && i < sweep ? "swept" : "",
             ]
               .filter(Boolean)
               .join(" ");
@@ -280,6 +305,16 @@ export default function SolveBoard({
             : `${filled} of ${PROBLEMS} answered`}
       </div>
 
+      {tally && (
+        <p className="sx-tally" role="status">
+          {tally.answered === 0
+            ? "Nothing to check yet."
+            : tally.right === problems.length
+              ? "All ten."
+              : `${tally.right} of ${tally.answered} answered ${tally.right === 1 ? "is" : "are"} right.`}
+        </p>
+      )}
+
       <div className="sx-pad">
         {(puzzle.tier ? KEYS_DECIMAL : KEYS).map((k) => (
           <button
@@ -304,6 +339,7 @@ export default function SolveBoard({
       )}
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button className="tool" onClick={runCheck}>
           Check
         </button>

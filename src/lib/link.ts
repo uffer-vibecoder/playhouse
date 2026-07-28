@@ -140,3 +140,90 @@ export async function pendingInvite(): Promise<string | null> {
     .maybeSingle();
   return (data?.code as string) ?? null;
 }
+
+/* ── seeing what they have done ───────────────────────────────────────────── */
+
+export type PartnerFinish = { gameId: string; slot: string; at: string; summary: Record<string, unknown> };
+
+/**
+ * A linked partner's finished puzzles.
+ *
+ * Finished, and only finished — a `game_results` row exists solely once a
+ * puzzle is done, so there is structurally no way to watch someone mid-solve.
+ * That is the design rather than a limitation, and it is worth saying out loud
+ * because "their progress" naturally sounds like it should include how far
+ * along they are on something. It does not, and cannot.
+ */
+export async function loadPartnerFinishes(partner: string): Promise<PartnerFinish[]> {
+  if (!supabaseConfigured) return [];
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("game_results")
+    .select("game_id, slot, completed_at, summary")
+    .eq("user_id", partner)
+    .order("completed_at", { ascending: false });
+  if (error) {
+    console.error("[link] reading a partner's record failed:", error.message, error);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    gameId: r.game_id as string,
+    slot: r.slot as string,
+    at: r.completed_at as string,
+    summary: (r.summary ?? {}) as Record<string, unknown>,
+  }));
+}
+
+/**
+ * Write result rows for puzzles finished before results existed.
+ *
+ * `recordResult` only started writing on the day the results table shipped, so
+ * everything either of us had already finished has a solved save and no result
+ * — which is most of the archive, and it would make a freshly linked partner
+ * look like they had never played. The saves know what was finished and when it
+ * was last touched, so the history can be reconstructed.
+ *
+ * `updated_at` is not really a completion time: it moves whenever a puzzle is
+ * touched. It is the closest thing that exists, and using it is better than
+ * discarding the finish entirely — but it is why `summary` is left empty here
+ * rather than invented, and why this only ever fills gaps. Insert-if-absent, so
+ * a real recorded finish is never overwritten by this guess.
+ */
+export async function backfillResults(): Promise<number> {
+  if (!supabaseConfigured) return 0;
+  const me = await uid();
+  if (!me) return 0;
+  const sb = getSupabase()!;
+
+  const { data: solved } = await sb
+    .from("game_progress")
+    .select("slot, game_id, updated_at")
+    .eq("user_id", me)
+    .eq("solved", true);
+  if (!solved?.length) return 0;
+
+  const { data: have } = await sb.from("game_results").select("slot").eq("user_id", me);
+  const already = new Set((have ?? []).map((r) => r.slot as string));
+
+  const rows = solved
+    .filter((r) => !already.has(r.slot as string))
+    .map((r) => ({
+      user_id: me,
+      slot: r.slot as string,
+      game_id: r.game_id as string,
+      completed_at: r.updated_at as string,
+      elapsed_ms: null,
+      summary: {},
+    }));
+  if (!rows.length) return 0;
+
+  const { error } = await sb
+    .from("game_results")
+    .upsert(rows, { onConflict: "user_id,slot", ignoreDuplicates: true });
+  if (error) {
+    console.error("[link] backfilling the record failed:", error.message, error);
+    return 0;
+  }
+  return rows.length;
+}

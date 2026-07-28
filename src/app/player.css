@@ -280,6 +280,19 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 }
 .tool:active{background:var(--fill); border-color:var(--fill)}
 
+/* the optional clock */
+.clockrow{display:flex; align-items:center; gap:8px; flex:1 1 auto}
+.sx-clock{
+  font-family:var(--display); font-weight:600; font-size:19px;
+  font-variant-numeric:tabular-nums; color:var(--ink); min-width:58px;
+}
+/* a slow pulse while it runs, so a paused clock and a running one are told
+   apart without reading the digits */
+.sx-clock.ticking{animation:tickpulse 2s ease-in-out infinite}
+.sx-clock.done{font-size:15px; color:var(--muted)}
+@keyframes tickpulse{0%,100%{opacity:1} 50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){ .sx-clock.ticking{animation:none} }
+
 /* code key + letters-used tracker, as specified for page 1 */
 .kgrid{display:grid; grid-template-columns:repeat(13,1fr); gap:6px}
 .kcell{text-align:center}
@@ -365,6 +378,29 @@ h1{font-family:var(--display); font-weight:600; font-size:42px; line-height:1; l
 .sx-row[aria-current="true"]{border-color:var(--ink); background:var(--fill-tint)}
 .sx-row.wrong{border-color:var(--accent-deep); background:var(--fill-tint)}
 .sx-row.right{border-color:var(--fill); background:var(--paper)}
+/* The check sweeps down the page rather than landing all at once: a row lifts
+   as it is reached, so the button plainly did something. Wrong rows keep their
+   existing mark and are deliberately not animated — a shake on a mistake is a
+   telling-off, and this is a worksheet somebody chose to do. */
+.sx-row.swept{animation:sx-land .34s cubic-bezier(.2,.9,.3,1) both}
+@keyframes sx-land{
+  0%{transform:none}
+  45%{transform:translateX(3px) scale(1.012)}
+  100%{transform:none}
+}
+.sx-row.right.swept .sx-ans{color:var(--fill-text)}
+@media (prefers-reduced-motion:reduce){
+  .sx-row.swept{animation:none}
+}
+.sx-tally{
+  margin:2px 0 10px; text-align:center;
+  font-family:var(--display); font-weight:600; font-size:15px; color:var(--ink);
+  animation:sx-say .25s ease-out both;
+}
+@keyframes sx-say{from{opacity:0; transform:translateY(-3px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .sx-tally{animation:none}
+}
 .sx-row:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px}
 .sx-n{
   font-size:10px; font-weight:700; letter-spacing:1px; color:var(--muted);
@@ -615,6 +651,20 @@ footer{
 .linked .recsub{color:#4A4A4A}
 .linknote{margin:12px 0 0; font-size:12px; color:var(--shell-body)}
 
+.theirs{margin-top:14px; display:grid; gap:10px}
+.theirscounts{display:flex; flex-wrap:wrap; gap:8px}
+.theirscount{
+  padding:5px 10px; border:1.5px solid var(--shell-rule); border-radius:999px;
+  font-size:11px; color:var(--shell-body);
+}
+.theirscount b{font-family:var(--display); font-size:14px; color:var(--shell-ink)}
+.theirslist{list-style:none; margin:0; padding:0; display:grid; gap:0}
+.theirslist li{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:8px 2px; border-bottom:1.5px solid var(--shell-rule);
+  font-size:12px; color:var(--shell-ink);
+}
+
 @media (max-width:560px){
   .linkrow{grid-template-columns:1fr; gap:22px}
 }
@@ -633,7 +683,7 @@ footer{
 .sx-over{padding:0 3px; font-size:.66em}
 .sx-under{padding:0 3px; font-size:.66em; border-top:1.5px solid currentColor}
 
-.sx-scratch{margin:14px 0 6px; border:1.5px solid var(--rule); border-radius:12px; overflow:hidden}
+.sx-scratch{margin:4px 0 6px; border:1.5px solid var(--rule); border-radius:12px; overflow:hidden}
 .sx-scratchnote{
   margin-left:auto; align-self:center;
   font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted);
@@ -643,8 +693,11 @@ footer{
   cursor:crosshair; touch-action:none;   /* the stroke is ours, not the page's scroll */
 }
 .sx-scratchtools{display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; background:var(--tile)}
-/* a three-line label inside a pill reads as a mistake; let them wrap as a row */
-.sx-scratchtools .tool{white-space:nowrap}
+/* `.tool` is `flex:1; min-width:110px` — built for a row of equal buttons at
+   the foot of a sheet. In this little bar that makes three of them fight for
+   342px, and with nowrap the label overflows its own pill instead. Here they
+   size to their text and the row wraps if it must. */
+.sx-scratchtools .tool{flex:0 0 auto; min-width:0; white-space:nowrap}
 
 .sx-calc{display:grid; gap:8px; max-width:280px; margin:4px auto 0}
 .sx-calcshow{

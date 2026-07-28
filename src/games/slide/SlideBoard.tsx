@@ -20,6 +20,8 @@ import {
 } from "./engine";
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 
 const GAME_ID = "slide";
 
@@ -79,6 +81,9 @@ export default function SlideBoard({
     () => slotKey(GAME_ID, puzzle.id, fingerprint([[puzzle.seed]], String(puzzle.seed))),
     [puzzle]
   );
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
+
   const restoring = restoredSlot !== slot;
 
   /* restore */
@@ -110,13 +115,14 @@ export default function SlideBoard({
   useEffect(() => {
     if (solved && !solvedOnce.current && !restoring) {
       solvedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* the record's copy: facts about the attempt, never the answer */
-      void recordResult(slot, GAME_ID, { moves: session.past.length });
+      void recordResult(slot, GAME_ID, { moves: session.past.length }, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, session.past.length]);
+  }, [solved, restoring, onSolved, slot, session.past.length, stopTimer, elapsed]);
 
   /**
    * Make a move and record it.
@@ -299,6 +305,7 @@ export default function SlideBoard({
       </div>
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button className="tool" onClick={undo} disabled={!session.past.length}>
           Back
         </button>

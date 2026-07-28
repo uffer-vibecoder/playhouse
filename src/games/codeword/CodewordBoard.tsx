@@ -27,6 +27,8 @@ import {
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 
 const GAME_ID = "codeword";
 
@@ -52,6 +54,9 @@ export default function CodewordBoard({
     () => slotKey(GAME_ID, puzzle.id, fingerprint(puzzle.grid, puzzle.key)),
     [puzzle]
   );
+
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
 
   /* restore ------------------------------------------------------------- */
   useEffect(() => {
@@ -82,13 +87,14 @@ export default function CodewordBoard({
   useEffect(() => {
     if (solved && !solvedOnce.current && !restoring) {
       solvedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* the record's copy: facts about the attempt, never the answer */
-      void recordResult(slot, GAME_ID, {});
+      void recordResult(slot, GAME_ID, {}, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot]);
+  }, [solved, restoring, onSolved, slot, stopTimer, elapsed]);
 
   /* input --------------------------------------------------------------- */
   const type = useCallback(
@@ -258,6 +264,7 @@ export default function CodewordBoard({
       </div>
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button className="tool" onClick={runCheck}>
           Check
         </button>

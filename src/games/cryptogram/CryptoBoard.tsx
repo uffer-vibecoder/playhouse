@@ -26,6 +26,8 @@ import {
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 
 const GAME_ID = "cryptogram";
 
@@ -52,6 +54,9 @@ export default function CryptoBoard({
     () => slotKey(GAME_ID, puzzle.id, fingerprint([[puzzle.key.length]], puzzle.key)),
     [puzzle]
   );
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
+
   const restoring = restoredSlot !== slot;
 
   /* restore */
@@ -83,13 +88,14 @@ export default function CryptoBoard({
   useEffect(() => {
     if (solved && !solvedOnce.current && !restoring) {
       solvedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* the record's copy: facts about the attempt, never the answer */
-      void recordResult(slot, GAME_ID, {});
+      void recordResult(slot, GAME_ID, {}, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot]);
+  }, [solved, restoring, onSolved, slot, stopTimer, elapsed]);
 
   useEffect(() => {
     if (!state.wrong.size) return;
@@ -219,6 +225,7 @@ export default function CryptoBoard({
       </div>
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button className="tool" onClick={() => setState((s) => check(puzzle, s))}>
           Check
         </button>

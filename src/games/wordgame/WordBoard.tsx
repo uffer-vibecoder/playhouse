@@ -24,6 +24,8 @@ import {
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import { printPanelsOpen, watchBrowserPrint } from "@/lib/print";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 import GUESS_WORDS from "@/data/wordgame-guesses.json";
 import { SITE } from "@/lib/site";
 
@@ -74,6 +76,9 @@ export default function WordBoard({
     [puzzle]
   );
 
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
+
   const restoring = restoredSlot !== slot;
 
   /* restore */
@@ -106,13 +111,14 @@ export default function WordBoard({
   useEffect(() => {
     if (solved && !endedOnce.current && !restoring) {
       endedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* the record's copy: facts about the attempt, never the answer */
-      void recordResult(slot, GAME_ID, { guesses: state.guesses.length, of: TRIES, failed: state.status === "lost" });
+      void recordResult(slot, GAME_ID, { guesses: state.guesses.length, of: TRIES, failed: state.status === "lost" }, elapsed);
     }
     if (!solved) endedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, state.guesses.length, state.status]);
+  }, [solved, restoring, onSolved, slot, state.guesses.length, state.status, stopTimer, elapsed]);
 
   /* a notice ("not a word") should clear itself rather than linger */
   useEffect(() => {
@@ -260,6 +266,7 @@ export default function WordBoard({
       </div>
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button className="tool" onClick={share} disabled={!over}>
           {copied ? "Copied" : "Share result"}
         </button>

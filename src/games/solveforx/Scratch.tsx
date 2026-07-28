@@ -37,6 +37,14 @@ export default function Scratch({ problem }: { problem?: string }) {
    */
   const items = useRef<Item[]>([]);
   const [count, setCount] = useState(0);
+  /**
+   * Folded away by default, like the calculator beneath it.
+   *
+   * A 300px canvas sitting open under every set pushes the tools off a phone
+   * screen whether or not anyone wanted to write anything. Opening it is one
+   * tap, and the summary says what is on it so a fold does not hide work.
+   */
+  const [open, setOpen] = useState(false);
 
   const repaint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -95,10 +103,14 @@ export default function Scratch({ problem }: { problem?: string }) {
   }, [repaint]);
 
   useEffect(() => {
+    // `fit` again when the panel opens: a canvas inside a closed <details> has
+    // no layout box, so sizing it there gives a zero-width backing store and
+    // the first stroke would land nowhere.
+    if (!open) return;
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, [fit]);
+  }, [fit, open]);
 
   const at = (e: React.PointerEvent) => {
     const box = canvasRef.current!.getBoundingClientRect();
@@ -153,7 +165,13 @@ export default function Scratch({ problem }: { problem?: string }) {
   };
 
   return (
-    <div className="sx-scratch noprint">
+    <details className="disclosure noprint" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>
+        <span className="chev" />
+        Scratch paper
+        <span className="sum-note">{count ? `${count} thing${count === 1 ? "" : "s"} on it` : "not saved"}</span>
+      </summary>
+      <div className="disclosure-body sx-scratch">
       <canvas
         ref={canvasRef}
         className="sx-canvas"
@@ -178,6 +196,7 @@ export default function Scratch({ problem }: { problem?: string }) {
         {/* the one thing worth saying, said once */}
         <span className="sx-scratchnote">not saved</span>
       </div>
-    </div>
+      </div>
+    </details>
   );
 }

@@ -19,6 +19,8 @@ import {
 } from "./engine";
 import { fingerprint, loadProgress, recordResult, saveProgress, slotKey, type SaveOutcome } from "@/lib/progress";
 import Celebration from "@/components/Celebration";
+import TimerButton from "@/components/TimerButton";
+import { useTimer } from "@/lib/use-timer";
 
 const GAME_ID = "blocks";
 
@@ -54,6 +56,9 @@ export default function BlocksBoard({
       ),
     [puzzle]
   );
+  const timer = useTimer(slot);
+  const { stop: stopTimer, ms: elapsed } = timer;
+
   const restoring = restoredSlot !== slot;
 
   /* restore */
@@ -86,14 +91,15 @@ export default function BlocksBoard({
   useEffect(() => {
     if (solved && !solvedOnce.current && !restoring) {
       solvedOnce.current = true;
+      stopTimer();
       setCelebrate(true);
       onSolved?.(slot);
       /* the record's copy: facts about the attempt, never the answer. Par
          travels with it so a result reads on its own terms later. */
-      void recordResult(slot, GAME_ID, { moves: state.moves, par: puzzle.par });
+      void recordResult(slot, GAME_ID, { moves: state.moves, par: puzzle.par }, elapsed);
     }
     if (!solved) solvedOnce.current = false;
-  }, [solved, restoring, onSolved, slot, state.moves, puzzle.par]);
+  }, [solved, restoring, onSolved, slot, state.moves, puzzle.par, stopTimer, elapsed]);
 
   const go = useCallback(
     (id: number, dir: Dir, distance?: number) => {
@@ -288,6 +294,7 @@ export default function BlocksBoard({
       )}
 
       <div className="tools">
+        <TimerButton timer={timer} solved={solved} />
         <button
           className="tool"
           onClick={() => setState(undoMove)}
