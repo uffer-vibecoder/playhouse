@@ -23,6 +23,7 @@ const LABEL: Record<string, string> = {
   blocks: "Colour Blocks",
   freeatro: "Free-Atro",
   blockout: "Block Out!",
+  wordtray: "Word Tray",
 };
 
 /**

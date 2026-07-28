@@ -618,6 +618,63 @@ footer{
 .runbar > span.onbest{background:var(--fill)}
 .runbar b{font-family:var(--display); font-size:11px; font-weight:600; color:var(--body); font-variant-numeric:tabular-nums}
 
+/* ── word tray ───────────────────────────────────────────────────────────────
+   Seven letters and a small crossword made only of what they spell.
+
+   The grid is mostly holes, so the empty squares are nothing at all rather than
+   blanks: a cell that is not part of a word should read as paper, not as
+   something still to fill.
+── */
+.wt-grid{display:grid; gap:3px; margin:14px auto 6px}
+.wt-void{aspect-ratio:1; min-width:26px}
+.wt-cell{
+  aspect-ratio:1; min-width:26px; display:grid; place-items:center;
+  background:#FFFFFF; border:2px solid var(--ink); border-radius:5px;
+  font-family:var(--display); font-weight:600; font-size:17px;
+  color:var(--ink); text-transform:uppercase;
+}
+.wt-cell.on{background:var(--fill); border-color:var(--ink)}
+
+/* what is being spelled, or what just happened to it */
+.wt-say{
+  min-height:30px; margin:4px 0 8px; text-align:center;
+  font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:3px;
+  text-transform:uppercase; color:var(--ink);
+}
+.wt-say.found{color:var(--fill-text)}
+.wt-say.bonus{color:var(--accent-text)}
+/* "again" and "no" are told apart by weight rather than by red: this is a game
+   where guessing widely is the point, and a warning colour for a real word you
+   have already found reads as a telling-off */
+.wt-say.again,.wt-say.no{color:var(--muted); font-weight:500; letter-spacing:2px}
+
+.wt-tray{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:6px 0 10px}
+.wt-letter{
+  width:52px; height:52px; margin:0; padding:0;
+  border:2px solid var(--ink); border-radius:50%; background:#FFFFFF;
+  font-family:var(--display); font-weight:600; font-size:23px; color:var(--ink);
+  text-transform:uppercase; cursor:pointer;
+}
+.wt-letter:active{background:var(--fill)}
+.wt-letter.used{background:var(--tile); color:var(--muted); border-color:var(--underline)}
+.wt-letter:disabled{cursor:default}
+
+.wt-actions{display:flex; justify-content:center; gap:8px; margin-bottom:12px}
+.wt-actions .tool{flex:0 0 auto; min-width:88px}
+
+.wt-bonus{
+  display:grid; gap:4px; margin:0 0 12px; padding:10px 12px;
+  border:1.5px solid var(--rule); border-radius:10px; background:var(--tile);
+}
+.wt-bonushead{font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted)}
+.wt-bonuslist{font-size:12px; line-height:1.6; color:var(--body); word-spacing:2px}
+
+@media (max-width:560px){
+  .wt-cell,.wt-void{min-width:0}
+  .wt-cell{font-size:13px; border-width:1.5px}
+  .wt-letter{width:44px; height:44px; font-size:19px}
+}
+
 /* ── block out! ──────────────────────────────────────────────────────────────
    Eight by eight, three pieces at a time.
 

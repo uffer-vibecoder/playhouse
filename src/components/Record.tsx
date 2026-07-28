@@ -28,6 +28,7 @@ import slide from "@/data/slide.json";
 import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
 import freeatro from "@/data/freeatro.json";
+import wordtray from "@/data/wordtray.json";
 
 /**
  * The record — design 2c.
@@ -48,6 +49,7 @@ type Seeded = { id: string; seed: number };
 type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
 type FA = { id: string; seed: number };
+type WT = { id: string; letters: string; w: number; h: number };
 type BL = { id: string; blocks: { x: number; y: number; w: number; h: number }[]; gates: { edge: string; at: number; len: number; hue: string }[] };
 
 const cwSlot = (p: CW) => slotKey("codeword", p.id, fingerprint(p.grid, p.key));
@@ -56,6 +58,7 @@ const sxSlot = (p: Seeded) => slotKey("solveforx", p.id, fingerprint([[p.seed]],
 const slSlot = (p: Seeded) => slotKey("slide", p.id, fingerprint([[p.seed]], String(p.seed)));
 const cgSlot = (p: CG) => slotKey("cryptogram", p.id, fingerprint([[p.key.length]], p.key));
 const faSlot = (p: FA) => slotKey("freeatro", p.id, fingerprint([[p.seed]], String(p.seed)));
+const wtSlot = (p: WT) => slotKey("wordtray", p.id, fingerprint([[p.w, p.h]], p.letters));
 const blSlot = (p: BL) =>
   slotKey(
     "blocks",
@@ -74,7 +77,7 @@ export default function Record() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, fa, faRuns, boRuns, wgSaves, sxSaves] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, fa, wt, faRuns, boRuns, wgSaves, sxSaves] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
@@ -82,6 +85,7 @@ export default function Record() {
         loadSolvedSet("cryptogram"),
         loadSolvedSet("blocks"),
         loadSolvedSet("freeatro"),
+        loadSolvedSet("wordtray"),
         loadGameSaves<Record<string, unknown>>("freeatro"),
         loadGameSaves<Record<string, unknown>>("blockout"),
         loadGameSaves<{ guesses?: string[] }>("wordgame"),
@@ -126,16 +130,16 @@ export default function Record() {
           (sum) => (typeof sum.score === "number" ? sum.score : null),
           (sum) => (typeof sum.placed === "number" ? `${sum.placed} pieces` : null)
         ),
-        draftRecord("wordtray", "09", "Word Tray", "in draft — the letters are the clue"),
+        simpleRecord("wordtray", "09", "Word Tray", wordtray as WT[], wt, (p) => wtSlot(p as WT)),
         draftRecord("sudoku", "10", "Jigsaw Sudoku", "in draft — the regions are the hard part"),
       ]);
 
-      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + fa.size;
+      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + fa.size + wt.size;
       // No times exist yet, so every finish is untimed. Passing an empty array
       // rather than faking one keeps the average null instead of 0:00.
       setPlayer(playerRecord(finished, []));
 
-      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa]);
+      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...fa, ...wt]);
       setBadges(
         stamps(
           [
@@ -146,6 +150,7 @@ export default function Record() {
             { id: "cryptogram", name: "Cryptogram", puzzles: cryptogram as CG[], slotOf: (p) => cgSlot(p as CG) },
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
             { id: "freeatro", name: "Free-Atro", puzzles: freeatro as FA[], slotOf: (p) => faSlot(p as FA) },
+            { id: "wordtray", name: "Word Tray", puzzles: wordtray as WT[], slotOf: (p) => wtSlot(p as WT) },
           ],
           solvedAll
         )
