@@ -113,11 +113,17 @@ export default function BlocksBoard({
         : null;
       if (!dir) return;
       e.preventDefault();
+      /* the picked block may have left the board since it was picked; the
+         engine treats that as a no-op, and this stops asking */
+      if (!state.blocks.some((b) => b.id === picked)) {
+        setPicked(null);
+        return;
+      }
       go(picked, dir);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [picked, go]);
+  }, [picked, go, state.blocks]);
 
   /**
    * Drag a block.

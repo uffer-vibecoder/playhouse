@@ -81,7 +81,12 @@ export function initialState(puzzle: Puzzle, restored?: Saved): State {
     }
   }
   const shown = (restored?.shown ?? [])
-    .filter((c) => Number.isInteger(c) && c >= 0 && c < CELLS && !puzzle.given[c])
+    .filter(
+      (c) =>
+        Number.isInteger(c) && c >= 0 && c < CELLS && !puzzle.given[c] &&
+        // a hint always wrote the answer, so a save saying otherwise is not one
+        entries[c] === puzzle.solution[c]
+    )
     .slice(0, HINTS);
   return { entries, marks, shown };
 }
@@ -97,8 +102,21 @@ export const toSave = (puzzle: Puzzle, s: State): Saved => ({
 
 export const isGiven = (puzzle: Puzzle, cell: number) => puzzle.given[cell] !== 0;
 
+/**
+ * Squares that cannot be changed: the clues, and anything a hint filled in.
+ *
+ * A hinted square is locked for the same reason a clue is — it was handed over
+ * rather than worked out, and it is right by construction. Leaving it editable
+ * looked harmless and was not: rub one out and the square went empty while
+ * still counting as hinted, so writing anything there afterwards showed up in
+ * the hint's own italics, as though the board had given you a number it had
+ * not. Found by playing ten thousand random moves, not by reading.
+ */
+export const isLocked = (puzzle: Puzzle, s: State, cell: number) =>
+  isGiven(puzzle, cell) || s.shown.includes(cell);
+
 export function write(puzzle: Puzzle, s: State, cell: number, value: number): State {
-  if (isGiven(puzzle, cell)) return s;
+  if (isLocked(puzzle, s, cell)) return s;
   if (s.entries[cell] === value) return s;
   const entries = [...s.entries];
   entries[cell] = value;
@@ -120,7 +138,7 @@ export function write(puzzle: Puzzle, s: State, cell: number, value: number): St
  * room for a note would be a surprising way to lose an answer.
  */
 export function note(puzzle: Puzzle, s: State, cell: number, value: number): State {
-  if (isGiven(puzzle, cell) || s.entries[cell]) return s;
+  if (isLocked(puzzle, s, cell) || s.entries[cell]) return s;
   const marks = [...s.marks];
   marks[cell] ^= 1 << value;
   return { entries: s.entries, marks, shown: s.shown };
@@ -139,7 +157,7 @@ export function toggle(puzzle: Puzzle, s: State, cell: number, value: number): S
 
 /** Rub out whatever is in a cell — the number if there is one, else the notes. */
 export function erase(puzzle: Puzzle, s: State, cell: number): State {
-  if (isGiven(puzzle, cell)) return s;
+  if (isLocked(puzzle, s, cell)) return s;
   if (s.entries[cell]) return write(puzzle, s, cell, 0);
   if (!s.marks[cell]) return s;
   const marks = [...s.marks];

@@ -267,3 +267,31 @@ test("no board starts with the hero already in the doorway", async () => {
     assert.ok(!atDoor, `${p.id} starts finished`);
   }
 });
+
+/* ── a block that is no longer there ──────────────────────────────────────── */
+
+test("pushing a block that has already left does nothing, rather than throwing", () => {
+  /*
+   * Reachable, and it was a white screen on a board you had just won: pick up
+   * the hero, drag it out through the gate, then press an arrow key. The board
+   * still remembers which block was picked, that block is gone, and `reach`
+   * asserted it existed — so the no-op became a TypeError inside a React state
+   * updater. Found by fuzzing.
+   */
+  const p = puzzle(3, 3, [{ x: 1, y: 1, w: 1, h: 1, hero: true }], OUT_TOP);
+  const gone = slide(p, initialState(p), 0, "up");
+  assert.ok(isSolved(gone));
+  assert.equal(gone.blocks.length, 0);
+
+  for (const dir of ["up", "down", "left", "right"] as const) {
+    assert.equal(slide(p, gone, 0, dir), gone, `${dir}: same state back, no exception`);
+    assert.deepEqual(reach(p, gone.blocks, 0, dir), { max: 0, canExit: false });
+  }
+});
+
+test("an id that never existed is treated the same way", () => {
+  const p = puzzle(3, 3, [{ x: 1, y: 1, w: 1, h: 1, hero: true }], OUT_TOP);
+  const s = initialState(p);
+  assert.equal(slide(p, s, 99, "up"), s);
+  assert.equal(reach(p, s.blocks, 99, "up").max, 0);
+});

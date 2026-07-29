@@ -134,7 +134,12 @@ export default function JigsawBoard({
     [at, pencil, puzzle, solved]
   );
 
-  const step = nextStep(puzzle, state);
+  /* Memoised because it is not cheap: working out what a hint *would* do runs
+     the singles solver over the whole board, which is 2.3ms on a tricky one
+     against 0.01ms for the conflict check beside it. Unmemoised it ran on
+     every render — so every tap on a square, and every arrow key, paid for a
+     deduction nobody asked for. */
+  const step = useMemo(() => nextStep(puzzle, state), [puzzle, state]);
   const askHint = useCallback(() => {
     const now = nextStep(puzzle, state);
     if (now.kind === "mistake") {

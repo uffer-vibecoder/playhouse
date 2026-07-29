@@ -438,3 +438,29 @@ test("a hint says which kind of reasoning it used", () => {
   const step = nextStep(P, initialState(P));
   if (step.kind === "cell") assert.ok(step.by === "naked" || step.by === "hidden");
 });
+
+test("a square a hint filled cannot then be rubbed out or written over", () => {
+  /*
+   * It was editable, and that was not harmless: rub the hint out and the square
+   * went empty while still counting as hinted, so anything written there
+   * afterwards appeared in the hint's own italics — the board appearing to
+   * vouch for a number it had never given. Found by fuzzing, not by reading.
+   */
+  const s = hint(P, initialState(P));
+  const at = s.shown[0];
+  assert.equal(s.entries[at], P.solution[at]);
+
+  assert.equal(erase(P, s, at), s, "cannot be rubbed out");
+  assert.equal(write(P, s, at, P.solution[at] === 1 ? 2 : 1), s, "cannot be written over");
+  assert.equal(toggle(P, s, at, s.entries[at]), s, "and tapping the same number does not clear it");
+  assert.equal(note(P, s, at, 5), s, "nor can it take notes");
+});
+
+test("a save cannot claim a hint for a square holding the wrong number", () => {
+  const at = blank(P);
+  const wrong = P.solution[at] === 9 ? 1 : 9;
+  const entries = new Array(81).fill(0);
+  entries[at] = wrong;
+  const back = initialState(P, { entries, shown: [at] });
+  assert.deepEqual(back.shown, [], "a hint always wrote the answer, so this was not one");
+});

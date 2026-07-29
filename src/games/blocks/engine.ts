@@ -158,7 +158,21 @@ export function reach(puzzle: Puzzle, blocks: Block[], id: number, dir: Dir): {
   max: number;
   canExit: boolean;
 } {
-  const me = blocks.find((b) => b.id === id)!;
+  const me = blocks.find((b) => b.id === id);
+  /**
+   * A block that is not there goes nowhere.
+   *
+   * This used to assert the block existed, and it is reachable: pick up the
+   * hero, drag it out through the gate, then press an arrow key. The board
+   * still remembers which block was picked, that block has left, and the
+   * non-null assertion turned a no-op into a TypeError thrown inside a React
+   * state updater — which is a white screen on a board you just won. Found by
+   * fuzzing, not by playing.
+   *
+   * Returning "cannot move" is also what `slide` already promises callers:
+   * the same state back, and no exceptions for a block that cannot move.
+   */
+  if (!me) return { max: 0, canExit: false };
   const others = blocks.filter((b) => b.id !== id);
   const [dx, dy] = STEP[dir];
 
