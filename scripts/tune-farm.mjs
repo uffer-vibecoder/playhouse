@@ -108,12 +108,52 @@ function spend(run) {
 
 const seenBy = (t) => sites(TOWERS[t.kind].range).find((s) => s.at === t.at)?.seen ?? 0;
 
-function playRun(seed) {
+/**
+ * Three players, so the *choice* can be measured and not just the outcome.
+ *
+ * Noah's read after playing was "build wide for now", which is a verdict on the
+ * design rather than a preference: if spreading out is always right then the
+ * upgrade button is decoration and the day has no decision in it. These three
+ * settle that. If wide and tall land in the same band, the choice is real; if
+ * one runs away with it, the numbers need moving.
+ */
+const PLAYERS = {
+  wide: (run) => {
+    const taken = new Set(run.towers.map((t) => t.at));
+    const want = pickKind(run);
+    const site = sites(TOWERS[want].range).find((s) => !taken.has(s.at));
+    return site ? build(run, site.at, want, PATH) : run;
+  },
+  tall: (run) => {
+    // four towers and then everything into levels
+    if (run.towers.length < 4) {
+      const taken = new Set(run.towers.map((t) => t.at));
+      const want = pickKind(run);
+      const site = sites(TOWERS[want].range).find((s) => !taken.has(s.at));
+      if (site) { const n = build(run, site.at, want, PATH); if (n !== run) return n; }
+    }
+    const best = [...run.towers]
+      .filter((t) => upgradeCost(t) !== null)
+      .sort((a, b) => (seenBy(b) - seenBy(a)) || (a.level - b.level));
+    for (const t of best) { const n = upgrade(run, t.at); if (n !== run) return n; }
+    return run;
+  },
+  mixed: spend,
+};
+
+function pickKind(run) {
+  return run.towers.length >= 3 && !run.towers.some((t) => t.kind === "sprinkler") ? "sprinkler"
+    : run.towers.filter((t) => t.kind === "beehive").length * 3 < run.towers.length ? "beehive"
+    : "scarecrow";
+}
+
+function playRun(seed, how = "mixed") {
   let run = newRun();
+  const step = PLAYERS[how];
 
   while (!run.over && run.night < 200) {
     for (;;) {
-      const next = spend(run);
+      const next = step(run);
       if (next === run) break; // nothing left it can afford
       run = next;
     }
@@ -123,21 +163,39 @@ function playRun(seed) {
   return { nights: run.history.length, towers: run.towers.length };
 }
 
-const nights = [];
 const t0 = Date.now();
-for (let i = 0; i < RUNS; i++) nights.push(playRun(1000 + i).nights);
-nights.sort((a, b) => a - b);
+console.log(`${RUNS} runs each (${new Date().toISOString().slice(11, 19)})`);
+console.log("player   low   q1  median   q3  high   mean   towers");
 
-const q = (p) => nights[Math.floor(nights.length * p)];
-console.log(`${RUNS} runs of the reference player (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
-console.log(`  nights survived: low ${nights[0]} · q1 ${q(0.25)} · median ${q(0.5)} · q3 ${q(0.75)} · high ${nights[nights.length - 1]}`);
-console.log(`  mean ${(nights.reduce((a, b) => a + b, 0) / nights.length).toFixed(1)}`);
+const summary = {};
+for (const how of ["wide", "tall", "mixed"]) {
+  const nights = [];
+  let towers = 0;
+  for (let i = 0; i < RUNS; i++) {
+    const r = playRun(1000 + i, how);
+    nights.push(r.nights);
+    towers += r.towers;
+  }
+  nights.sort((a, b) => a - b);
+  const q = (p) => nights[Math.floor(nights.length * p)];
+  const mean = nights.reduce((a, b) => a + b, 0) / nights.length;
+  summary[how] = mean;
+  console.log(
+    how.padEnd(8) +
+    String(nights[0]).padStart(3) + String(q(0.25)).padStart(5) + String(q(0.5)).padStart(8) +
+    String(q(0.75)).padStart(5) + String(nights[nights.length - 1]).padStart(6) +
+    mean.toFixed(1).padStart(7) + (towers / RUNS).toFixed(1).padStart(9)
+  );
+}
 
-/* Where it actually falls apart, which is more use than the average */
-const byNight = new Map();
-for (const n of nights) byNight.set(n, (byNight.get(n) ?? 0) + 1);
-console.log("  died on night: " +
-  [...byNight.entries()].sort((a, b) => a[0] - b[0]).map(([n, c]) => `${n}×${c}`).join(" "));
+const gap = Math.abs(summary.wide - summary.tall);
+console.log(
+  `\n  wide and tall differ by ${gap.toFixed(1)} nights — ` +
+  (gap < 1.5
+    ? "close enough that the choice is real"
+    : `${summary.wide > summary.tall ? "wide" : "tall"} is simply better, so it is not a decision`)
+);
+console.log(`  (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 
 /* And a look at one wave's shape, so the ladder can be read rather than felt */
 console.log("\n  wave sizes: " +

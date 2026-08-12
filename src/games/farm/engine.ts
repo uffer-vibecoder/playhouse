@@ -76,12 +76,45 @@ export function statsOf(t: Tower) {
   };
 }
 
-/** What the next level costs, or null when there is no next level. */
+/**
+ * What the next level costs, or null when there is no next level.
+ *
+ * **This number is the whole decision, and finding that out took a wrong turn
+ * worth recording.**
+ *
+ * Spreading out used to be simply the better play. Across 150 runs the wide
+ * player reached a mean of 10.6 nights on seventeen towers while the upgrading
+ * player managed 8.7 on four — not a decision, an answer, with the upgrade
+ * button as decoration. The arithmetic said why: a second scarecrow cost 20,
+ * doubled the damage and covered new ground, while a level cost 28 and added
+ * 80% to the same patch.
+ *
+ * The tempting fix was to make land dearer the more of it you take. It works,
+ * and it overshoots hard — at 22% a tower the upgrading player won by 4.4
+ * nights instead, and every setting down to 6% still favoured building tall.
+ * It was also a rule the player would have had to learn, for nothing.
+ *
+ * The culprit was the price of a level. At 0.7 + 0.5·level, with land staying
+ * flat, 400 runs each:
+ *
+ *     wide   median 11 · mean 10.8 · 17.7 towers
+ *     tall   median 11 · mean 10.8 ·  4.0 towers
+ *     mixed  median 12 · mean 11.7 ·  6.3 towers
+ *
+ * Dead level, and *combining* them beats either — which is what a decision is
+ * supposed to look like.
+ */
 export const upgradeCost = (t: Tower): number | null =>
-  t.level >= MAX_LEVEL ? null : Math.round(TOWERS[t.kind].cost * (0.8 + 0.6 * t.level));
+  t.level >= MAX_LEVEL ? null : Math.round(TOWERS[t.kind].cost * (0.7 + 0.5 * t.level));
 
-/** Selling gives back half of everything sunk in, rounded down — enough to fix
- *  a bad placement, not enough to make placement free. */
+/**
+ * Half of everything sunk in, rounded down.
+ *
+ * Enough to fix a bad placement, not enough to make placement free. Levels
+ * count towards it, so moving a tower you have poured money into still hurts —
+ * a spot is worth choosing carefully precisely because it becomes expensive to
+ * abandon.
+ */
 export function sellValue(t: Tower): number {
   let paid = TOWERS[t.kind].cost;
   for (let l = 1; l < t.level; l++) paid += upgradeCost({ ...t, level: l }) ?? 0;
