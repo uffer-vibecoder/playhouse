@@ -143,8 +143,15 @@ export default function BlocksBoard({
     const startY = e.clientY;
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
 
+    /* the same drag can end in a cancel rather than an up — see BlockBoard */
+    const cancel = () => {
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
+    };
+
     const finish = (ev: PointerEvent) => {
       window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       if (Math.abs(dx) < DRAG_FLOOR && Math.abs(dy) < DRAG_FLOOR) return; // a tap, not a drag
@@ -154,6 +161,7 @@ export default function BlocksBoard({
       go(id, dir, cells);
     };
     window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", cancel);
   };
 
   const inTheWay = state.blocks.filter((b) => !b.hero).length;

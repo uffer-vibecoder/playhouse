@@ -144,9 +144,26 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
       const sq = squareUnder(ev.clientX, ev.clientY);
       setOver(sq);
     };
+    /**
+     * A drag can end without a `pointerup`.
+     *
+     * The browser sends `pointercancel` instead when it takes the gesture over
+     * — a scroll it decided was its, an interrupting touch, a system sheet.
+     * Listening only for `pointerup` meant those left both listeners attached
+     * for the life of the page, one more pair per attempt, with the piece
+     * still held. Cancelling puts the ghost away and lets go of the window.
+     */
+    const cancel = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
+      setOver(null); // the piece stays picked up, so tap-then-tap carries on
+    };
+
     const finish = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
       const sq = squareUnder(ev.clientX, ev.clientY);
       // a tap that never left the tray keeps the piece held, so tap-then-tap
       // still works; a drag onto the board places it
@@ -161,6 +178,7 @@ export default function BlockBoard({ seed, run, onNewRun }: { seed: number; run:
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", cancel);
   };
 
   /**

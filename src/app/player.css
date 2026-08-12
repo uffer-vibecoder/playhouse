@@ -797,6 +797,7 @@ footer{
   display:grid; grid-template-columns:repeat(8,1fr); gap:3px;
   width:100%; max-width:var(--board); margin:0 auto;
   padding:5px; background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+  touch-action:none;   /* the drag is ours, not the page's */
 }
 .bo-cell{
   aspect-ratio:1; margin:0; padding:0; border:1.5px solid var(--rule); border-radius:5px;
@@ -843,6 +844,12 @@ footer{
 .bo-piece{
   display:grid; place-items:center; padding:10px; margin:0; min-width:76px; min-height:76px;
   border:2px solid var(--ink); border-radius:12px; background:#FFFFFF; cursor:pointer;
+  /* Without this a finger drag is claimed by the page as a scroll: the browser
+     stops sending pointermove, fires pointercancel instead of pointerup, and
+     the piece is never placed. Every other draggable surface here already said
+     so; this one was missed, and it made the game unplayable on a phone while
+     working perfectly with a mouse. */
+  touch-action:none;
 }
 .bo-piece.on{background:var(--fill-tint); outline:2px solid var(--fill); outline-offset:2px}
 /* a spent piece leaves its gap: the three are a hand to plan around, and a row
