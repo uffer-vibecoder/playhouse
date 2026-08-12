@@ -25,7 +25,9 @@
  * to be unwinnable. So this reports the spread, not an average.
  */
 
-import { PESTS, TOWERS, runNight, waveFor } from "../src/games/farm/engine.ts";
+import {
+  PESTS, TOWERS, build, newRun, runNight, settle, upgrade, upgradeCost, waveFor,
+} from "../src/games/farm/engine.ts";
 
 const RUNS = Number(process.argv[2] ?? 200);
 
@@ -60,50 +62,65 @@ function sites(range) {
 }
 
 /**
- * The reference player's whole strategy.
+ * The reference player's whole strategy: build wide, then build up.
  *
- * Buy the best-covered free site it can afford, preferring scarecrows early
- * because they are cheap, adding a beehive once there is money for one, and a
- * sprinkler once there are guns worth holding pests in front of. No upgrades,
- * no reacting, no cleverness — that is the point.
+ * It fills good ground first and only starts upgrading once it has a few
+ * towers standing, which is roughly what a person does without thinking hard.
+ * No reacting, no selling, no judging one night against the next — that is the
+ * point. It is a floor, not a ceiling.
+ *
+ * Every move goes through the real `build` and `upgrade`, which refuse an
+ * unaffordable or occupied one by returning the same run back. Comparing by
+ * identity is how this knows to stop, exactly as `tune-freeatro.mjs` does.
  */
-function buy(coins, towers) {
-  const taken = new Set(towers.map((t) => t.at));
+function spend(run) {
+  const taken = new Set(run.towers.map((t) => t.at));
   const want =
-    towers.length >= 3 && !towers.some((t) => t.kind === "sprinkler") ? "sprinkler"
-    : towers.filter((t) => t.kind === "beehive").length * 3 < towers.length ? "beehive"
+    run.towers.length >= 3 && !run.towers.some((t) => t.kind === "sprinkler") ? "sprinkler"
+    : run.towers.filter((t) => t.kind === "beehive").length * 3 < run.towers.length ? "beehive"
     : "scarecrow";
 
-  const spec = TOWERS[want];
-  if (coins < spec.cost) return null;
-  const site = sites(spec.range).find((s) => !taken.has(s.at));
-  return site ? { at: site.at, kind: want } : null;
+  // a fourth tower is worth more than a second level, until there are five
+  if (run.towers.length < 5) {
+    const site = sites(TOWERS[want].range).find((s) => !taken.has(s.at));
+    if (site) {
+      const next = build(run, site.at, want, PATH);
+      if (next !== run) return next;
+    }
+  }
+
+  // then pour money into whatever sees the most path
+  const best = [...run.towers]
+    .filter((t) => upgradeCost(t) !== null)
+    .sort((a, b) => (seenBy(b) - seenBy(a)) || (a.level - b.level));
+  for (const t of best) {
+    const next = upgrade(run, t.at);
+    if (next !== run) return next;
+  }
+
+  const site = sites(TOWERS[want].range).find((s) => !taken.has(s.at));
+  if (site) {
+    const next = build(run, site.at, want, PATH);
+    if (next !== run) return next;
+  }
+  return run;
 }
 
-const START_COINS = 60;
-const STIPEND = 14; // what the farm pays each day before any crops exist
-const LIVES = 5;
+const seenBy = (t) => sites(TOWERS[t.kind].range).find((s) => s.at === t.at)?.seen ?? 0;
 
 function playRun(seed) {
-  const towers = [];
-  let coins = START_COINS;
-  let lives = LIVES;
-  let night = 0;
+  let run = newRun();
 
-  while (lives > 0 && night < 200) {
-    night++;
-    // the day: spend until nothing more is affordable
+  while (!run.over && run.night < 200) {
     for (;;) {
-      const t = buy(coins, towers);
-      if (!t) break;
-      coins -= TOWERS[t.kind].cost;
-      towers.push(t);
+      const next = spend(run);
+      if (next === run) break; // nothing left it can afford
+      run = next;
     }
-    const r = runNight({ w: W, h: H, path: PATH, towers }, waveFor(night, seed));
-    lives -= r.leaked;
-    coins += r.earned + STIPEND;
+    const r = runNight({ w: W, h: H, path: PATH, towers: run.towers }, waveFor(run.night, seed));
+    run = settle(run, r);
   }
-  return { nights: night - 1, towers: towers.length };
+  return { nights: run.history.length, towers: run.towers.length };
 }
 
 const nights = [];

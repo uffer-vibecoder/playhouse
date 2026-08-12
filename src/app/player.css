@@ -1797,6 +1797,9 @@ footer{
   container-type:inline-size;
   position:relative; width:100%; max-width:var(--board); margin:14px auto 12px;
   background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+  /* a tower near an edge computes a negative offset for its range overlay, and
+     without this the dashed box hangs off the board and over the controls */
+  overflow:hidden;
 }
 .fm-cells{position:absolute; inset:0; display:grid}
 /* Free ground is paper; the track is worn earth. These are fixed rather than
@@ -1869,4 +1872,83 @@ footer{
   /* the replay is motion by nature; the answer is that it is skippable and the
      outcome is written out in words either way */
   .fm-pest{transition:none}
+}
+
+/* ── smallholding, the day and the shooting ────────────────────────────────── */
+.fm-purse{
+  display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:12px 0 2px;
+  font-family:var(--ui); font-size:11px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--muted);
+}
+.fm-coins{display:flex; align-items:baseline; gap:5px; color:var(--ink)}
+.fm-coins{font-family:var(--display); font-size:26px; letter-spacing:0; font-variant-numeric:tabular-nums}
+.fm-coins i{font-family:var(--ui); font-size:10px; font-style:normal; color:var(--muted); letter-spacing:1.2px}
+.fm-lives{display:flex; gap:4px}
+.fm-heart{width:11px; height:11px; border:2px solid var(--underline); border-radius:50% 50% 3px 3px; background:none}
+.fm-heart.on{border-color:var(--ink); background:var(--accent)}
+.fm-sent{margin-left:auto}
+
+/* the plot you could afford invites a tap; the one you cannot stays quiet */
+.fm-plot.can:hover,.fm-plot.can:focus-visible{border-color:var(--fill-text); background:var(--fill-tint)}
+
+.fm-tower.on{box-shadow:0 0 0 3px var(--fill)}
+/* a tower that just fired kicks back — the shot line alone was easy to miss */
+.fm-tower.firing{animation:fm-kick .18s ease-out}
+@keyframes fm-kick{0%{transform:scale(.86)} 45%{transform:scale(.98)} 100%{transform:scale(.86)}}
+.fm-level{position:absolute; bottom:5%; left:0; right:0; display:flex; justify-content:center; gap:2px}
+.fm-level i{width:3px; height:3px; background:var(--ink); border-radius:50%}
+
+/* how far a tower can see, while you are looking at it */
+.fm-reach{
+  position:absolute; pointer-events:none; border:2px dashed var(--fill-text);
+  border-radius:8px; background:var(--fill-tint); opacity:.45;
+}
+
+.fm-pest{position:relative}
+/* what is left of a pest, under it. Fixed colours: how hurt something is is
+   the game, not the furniture */
+.fm-hp{
+  position:absolute; left:18%; bottom:14%; height:3px; background:#C4467E;
+  border-radius:2px; transition:width .1s linear;
+}
+.fm-pest.struck::after{box-shadow:0 0 0 3px var(--accent-tint); transform:scale(1.18)}
+.fm-pest::after{transition:transform .1s ease-out}
+
+/* a pest going down, rather than simply not being there next frame */
+.fm-gone{position:absolute; display:grid; place-items:center; pointer-events:none}
+.fm-gone::after{
+  content:""; width:50%; height:50%; border:2px solid var(--ink); border-radius:50%;
+  animation:fm-puff .34s ease-out both;
+}
+@keyframes fm-puff{
+  0%{transform:scale(.7); opacity:.9}
+  100%{transform:scale(2.1); opacity:0}
+}
+
+/* the house taking one */
+.fm-end.house.struck{animation:fm-thump .34s ease-out}
+@keyframes fm-thump{
+  0%,100%{transform:none; background:var(--fill)}
+  40%{transform:scale(1.14); background:var(--accent-deep)}
+}
+
+.fm-said{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;
+  margin:0 auto 12px; max-width:min(100%, var(--board)); padding:9px 12px;
+  border:1.5px solid var(--rule); border-radius:10px; background:var(--tile);
+  font-size:12px; color:var(--body);
+}
+.fm-said .fm-act{display:flex; flex-wrap:wrap; gap:6px}
+.fm-said .tool{min-width:0; padding:5px 12px; font-size:10px}
+.fm-max{font-size:11px; color:var(--muted)}
+
+.fm-kind b{
+  font-family:var(--display); font-size:12px; letter-spacing:0; color:var(--body);
+  font-variant-numeric:tabular-nums;
+}
+.fm-kind:disabled .fm-glyph{opacity:.4}
+
+@media (prefers-reduced-motion:reduce){
+  .fm-tower.firing,.fm-gone::after,.fm-end.house.struck{animation:none}
+  .fm-hp,.fm-pest::after{transition:none}
 }

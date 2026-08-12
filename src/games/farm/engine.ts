@@ -52,7 +52,41 @@ export type Tower = {
   /** the cell it stands on — never a path cell */
   at: number;
   kind: TowerKind;
+  /** 1, 2 or 3. A level is bought, and is what makes a good spot worth keeping */
+  level: number;
 };
+
+export const MAX_LEVEL = 3;
+
+/**
+ * What a tower is worth at its level.
+ *
+ * Damage grows faster than range: a level buys *more of what the tower already
+ * does* rather than turning it into a different tower. A scarecrow that could
+ * reach across the field at level three would make the beehive pointless.
+ */
+export function statsOf(t: Tower) {
+  const base = TOWERS[t.kind];
+  const step = t.level - 1;
+  return {
+    ...base,
+    damage: Math.round(base.damage * (1 + step * 0.8)),
+    range: base.range + (t.level >= 3 ? 1 : 0),
+    cool: Math.max(2, base.cool - step),
+  };
+}
+
+/** What the next level costs, or null when there is no next level. */
+export const upgradeCost = (t: Tower): number | null =>
+  t.level >= MAX_LEVEL ? null : Math.round(TOWERS[t.kind].cost * (0.8 + 0.6 * t.level));
+
+/** Selling gives back half of everything sunk in, rounded down — enough to fix
+ *  a bad placement, not enough to make placement free. */
+export function sellValue(t: Tower): number {
+  let paid = TOWERS[t.kind].cost;
+  for (let l = 1; l < t.level; l++) paid += upgradeCost({ ...t, level: l }) ?? 0;
+  return Math.floor(paid / 2);
+}
 
 /**
  * What each tower does, and they are deliberately not variations of one thing.
@@ -111,7 +145,23 @@ export type Mote = { id: number; kind: PestKind; at: number; hp: number; slowed:
 /** A shot fired this tick, for the board to draw a line for. */
 export type Shot = { from: number; to: number };
 
-export type Frame = { tick: number; motes: Mote[]; shots: Shot[] };
+/**
+ * One instant, and what happened on it.
+ *
+ * `died` and `leaked` are reported rather than left to be worked out. The board
+ * first derived them by watching pests disappear and guessing from how far
+ * along they were — which is a guess, and a guess in the one place where the
+ * replay must agree with the result exactly.
+ */
+export type Frame = {
+  tick: number;
+  motes: Mote[];
+  shots: Shot[];
+  /** ids that were stopped on this tick */
+  died: number[];
+  /** ids that reached the house on this tick */
+  leaked: number[];
+};
 
 export type NightResult = {
   frames: Frame[];
@@ -139,7 +189,7 @@ function inRange(field: Field, tower: Tower, atStep: number): boolean {
   const cell = field.path[Math.min(Math.floor(atStep / STEPS), field.path.length - 1)];
   const dx = cellX(field, tower.at) - cellX(field, cell);
   const dy = cellY(field, tower.at) - cellY(field, cell);
-  const r = TOWERS[tower.kind].range;
+  const r = statsOf(tower).range;
   return dx * dx + dy * dy <= r * r;
 }
 
@@ -208,7 +258,7 @@ export function runNight(field: Field, wave: Wave, maxTicks = 4000): NightResult
       }
       if (!target) continue;
 
-      const spec = TOWERS[tower.kind];
+      const spec = statsOf(tower);
       target.hp -= spec.damage;
       if (spec.slow > 0) { target.slowLeft = spec.slowFor; target.slowBy = spec.slow; }
       shots.push({ from: tower.at, to: target.id });
@@ -217,20 +267,23 @@ export function runNight(field: Field, wave: Wave, maxTicks = 4000): NightResult
 
     /* 3. the dead are counted before anything moves, so a pest killed this
           tick cannot also leak on it */
+    const diedNow: number[] = [];
     for (let i = live.length - 1; i >= 0; i--) {
       if (live[i].hp > 0) continue;
       killed++;
       earned += PESTS[live[i].kind].bounty;
+      diedNow.push(live[i].id);
       live.splice(i, 1);
     }
 
     /* 4. everything still standing walks */
+    const leakedNow: number[] = [];
     for (let i = live.length - 1; i >= 0; i--) {
       const m = live[i];
       let speed = PESTS[m.kind].speed;
       if (m.slowLeft > 0) { speed = Math.max(1, speed - m.slowBy); m.slowLeft--; }
       m.at += speed;
-      if (m.at >= end) { leaked++; live.splice(i, 1); }
+      if (m.at >= end) { leaked++; leakedNow.push(m.id); live.splice(i, 1); }
     }
 
     frames.push({
@@ -239,6 +292,8 @@ export function runNight(field: Field, wave: Wave, maxTicks = 4000): NightResult
         id: m.id, kind: m.kind, at: m.at, hp: m.hp, slowed: m.slowLeft > 0,
       })),
       shots,
+      died: diedNow,
+      leaked: leakedNow,
     });
 
     /* 5. over when the gate is empty and so is the field */
@@ -313,3 +368,95 @@ export function waveFor(night: number, seed = 1): Wave {
 /** What a wave is worth if every last pest is stopped. */
 export const waveBounty = (wave: Wave) =>
   wave.reduce((n, s) => n + PESTS[s.kind].bounty, 0);
+
+/* ── the run ──────────────────────────────────────────────────────────────────
+   The day, and everything that carries between nights. This is the layer that
+   makes placing a tower a decision rather than a formality: the first version
+   of the board had them free and unlimited, and with nothing to spend there was
+   nothing to weigh up.
+
+   It mirrors the `Run` above `State` in Free-Atro — the meta layer that owns
+   the money, sitting over a single night's simulation, which owns none of it.
+── */
+
+export type Run = {
+  night: number;
+  coins: number;
+  lives: number;
+  towers: Tower[];
+  /** every night's leak count, so a run has a shape and not just a number */
+  history: number[];
+  over: boolean;
+};
+
+export const START_COINS = 60;
+export const START_LIVES = 5;
+/** What the farm pays each morning regardless — the floor under a bad night. */
+export const STIPEND = 14;
+
+export const newRun = (): Run => ({
+  night: 1,
+  coins: START_COINS,
+  lives: START_LIVES,
+  towers: [],
+  history: [],
+  over: false,
+});
+
+/** Every function below returns the same object when nothing happened, so a
+ *  caller can compare by identity to know whether the tap did anything. */
+
+export function build(run: Run, at: number, kind: TowerKind, path: number[]): Run {
+  if (run.over) return run;
+  if (path.includes(at)) return run;
+  if (run.towers.some((t) => t.at === at)) return run;
+  const cost = TOWERS[kind].cost;
+  if (run.coins < cost) return run;
+  return { ...run, coins: run.coins - cost, towers: [...run.towers, { at, kind, level: 1 }] };
+}
+
+export function upgrade(run: Run, at: number): Run {
+  if (run.over) return run;
+  const t = run.towers.find((x) => x.at === at);
+  if (!t) return run;
+  const cost = upgradeCost(t);
+  if (cost === null || run.coins < cost) return run;
+  return {
+    ...run,
+    coins: run.coins - cost,
+    towers: run.towers.map((x) => (x.at === at ? { ...x, level: x.level + 1 } : x)),
+  };
+}
+
+export function sell(run: Run, at: number): Run {
+  if (run.over) return run;
+  const t = run.towers.find((x) => x.at === at);
+  if (!t) return run;
+  return {
+    ...run,
+    coins: run.coins + sellValue(t),
+    towers: run.towers.filter((x) => x.at !== at),
+  };
+}
+
+/**
+ * Take a night's outcome and move the run on.
+ *
+ * Lives never come back. A run that has ended stays ended — `over` is sticky,
+ * so a late call cannot revive it.
+ */
+export function settle(run: Run, result: NightResult): Run {
+  if (run.over) return run;
+  const lives = Math.max(0, run.lives - result.leaked);
+  return {
+    ...run,
+    night: run.night + 1,
+    coins: run.coins + result.earned + STIPEND,
+    lives,
+    history: [...run.history, result.leaked],
+    over: lives === 0,
+  };
+}
+
+/** How far a run got — the score, for an endless game. */
+export const nightsSurvived = (run: Run) => run.history.length;

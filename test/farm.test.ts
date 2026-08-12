@@ -32,7 +32,7 @@ const wave = (...kinds: ("grub" | "hopper" | "beetle")[]): Wave =>
 test("the same field and wave give the same night twice", () => {
   // the whole architecture rests on this: the outcome is settled before a
   // single frame is drawn, so the replay and the result can never disagree
-  const f = field([{ at: 8, kind: "scarecrow" }, { at: 12, kind: "beehive" }]);
+  const f = field([{ at: 8, kind: "scarecrow", level: 1 }, { at: 12, kind: "beehive", level: 1 }]);
   const w = waveFor(6, 42);
   const a = runNight(f, w);
   const b = runNight(f, w);
@@ -50,7 +50,7 @@ test("an undefended field leaks the whole wave and kills nothing", () => {
 });
 
 test("enough guns and nothing gets through", () => {
-  const towers = [8, 9, 10, 11, 12, 13].map((at) => ({ at, kind: "scarecrow" as const }));
+  const towers = [8, 9, 10, 11, 12, 13].map((at) => ({ at, kind: "scarecrow" as const, level: 1 }));
   const r = runNight(field(towers), wave("grub", "grub"));
   assert.equal(r.leaked, 0);
   assert.equal(r.killed, 2);
@@ -61,7 +61,7 @@ test("enough guns and nothing gets through", () => {
 test("a tower out of reach never fires a shot", () => {
   // the path is the top row; this one sits five rows below it, well past its
   // range of two
-  const far = field([{ at: 8 * 5 + 0, kind: "scarecrow" }]);
+  const far = field([{ at: 8 * 5 + 0, kind: "scarecrow", level: 1 }]);
   const r = runNight(far, wave("grub"));
   assert.equal(r.leaked, 1);
   assert.equal(r.frames.reduce((n, f) => n + f.shots.length, 0), 0, "it should have stayed quiet");
@@ -74,7 +74,7 @@ test("a pest killed on the doorstep does not also get in", () => {
    * house counts once, as a kill. Counting movement first would have let it
    * leak *and* pay a bounty.
    */
-  const towers = [8, 9, 10, 11, 12, 13, 14, 15].map((at) => ({ at, kind: "beehive" as const }));
+  const towers = [8, 9, 10, 11, 12, 13, 14, 15].map((at) => ({ at, kind: "beehive" as const, level: 1 }));
   const r = runNight(field(towers), wave("grub"));
   assert.equal(r.killed + r.leaked, 1, "it was counted exactly once");
   assert.equal(r.leaked, 0);
@@ -103,7 +103,7 @@ test("the field is exactly as long as the path says", () => {
 /* ── the sprinkler ────────────────────────────────────────────────────────── */
 
 test("a sprinkler holds a pest up without killing it", () => {
-  const wet = field([{ at: 8, kind: "sprinkler" }]);
+  const wet = field([{ at: 8, kind: "sprinkler", level: 1 }]);
   const dry = runNight(field(), wave("grub"));
   const slowed = runNight(wet, wave("grub"));
   assert.ok(slowed.frames.length > dry.frames.length, "it took longer to cross");
@@ -113,7 +113,7 @@ test("a sprinkler holds a pest up without killing it", () => {
 test("a slow can never stop a pest dead", () => {
   // otherwise a single sprinkler is an unbreakable wall and the game is over
   const wet = field([
-    { at: 8, kind: "sprinkler" }, { at: 9, kind: "sprinkler" }, { at: 10, kind: "sprinkler" },
+    { at: 8, kind: "sprinkler", level: 1 }, { at: 9, kind: "sprinkler", level: 1 }, { at: 10, kind: "sprinkler", level: 1 },
   ]);
   const r = runNight(wet, wave("beetle"));
   const walked = r.frames.map((f) => f.motes[0]?.at ?? Infinity);
@@ -132,7 +132,7 @@ test("the replay ends when the field is empty, not when the clock runs out", () 
 });
 
 test("every shot names a pest that was there to be shot", () => {
-  const f = field([{ at: 8, kind: "scarecrow" }, { at: 11, kind: "beehive" }]);
+  const f = field([{ at: 8, kind: "scarecrow", level: 1 }, { at: 11, kind: "beehive", level: 1 }]);
   const r = runNight(f, waveFor(5, 3));
   for (const frame of r.frames) {
     for (const shot of frame.shots) {
@@ -147,7 +147,7 @@ test("every shot names a pest that was there to be shot", () => {
 });
 
 test("nothing is ever counted twice", () => {
-  const f = field([{ at: 8, kind: "scarecrow" }, { at: 13, kind: "scarecrow" }]);
+  const f = field([{ at: 8, kind: "scarecrow", level: 1 }, { at: 13, kind: "scarecrow", level: 1 }]);
   const w = waveFor(7, 11);
   const r = runNight(f, w);
   assert.equal(r.killed + r.leaked, w.length, "every pest ended up exactly one way");
@@ -176,7 +176,7 @@ test("a wave is the same wave every time it is asked for", () => {
 });
 
 test("what a wave pays is what stopping all of it earns", () => {
-  const towers = Array.from({ length: 16 }, (_, i) => ({ at: 8 + i, kind: "beehive" as const }));
+  const towers = Array.from({ length: 16 }, (_, i) => ({ at: 8 + i, kind: "beehive" as const, level: 1 }));
   const w = waveFor(3, 2);
   const r = runNight(field(towers), w);
   assert.equal(r.leaked, 0, "this many beehives should hold night three");

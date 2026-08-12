@@ -3,34 +3,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Mark from "@/components/Mark";
 import {
+  PESTS,
   STEPS,
+  STIPEND,
   TOWERS,
+  build,
+  newRun,
+  nightsSurvived,
   runNight,
+  sell,
+  sellValue,
+  settle,
+  statsOf,
+  upgrade,
+  upgradeCost,
   waveFor,
   type Field,
   type NightResult,
-  type Tower,
+  type Run,
   type TowerKind,
 } from "./engine";
 
 /**
- * Stage one: place, watch, see how it went.
+ * Stage two: the day is a decision, and the night shows its working.
  *
- * There is no economy here yet and towers cost nothing. The only question this
- * is built to answer is whether a computed night *reads* — whether watching it
- * is worth doing, and whether choosing where to stand things is a decision or
- * a formality. If it is not, nothing has been spent on crops.
+ * The first cut had towers free and unlimited, and the verdict was that it was
+ * not very interactive. That was right, and not because it needed more buttons:
+ * with nothing to spend there was nothing to weigh up, so placing a tower was
+ * not a choice at all. Money, levels and lives are what turn the field into a
+ * question.
  *
- * The replay is already decided before a frame is drawn, so playback is pure
- * presentation: the speed control, the pause, and skipping to the end cannot
- * change what happened. That is also the answer for reduced motion — the whole
- * thing is skippable and the outcome is written out in words either way.
+ * The replay is still decided before it is drawn — speed, pause and skip only
+ * change how fast you find out — but it now shows enough to be worth watching:
+ * what is hurt, what dies, what gets through, and how close a pest is to
+ * either.
  */
 
-/** A path that doubles back, so a tower in the middle can watch two stretches
- *  of it — which is the only reason placement is interesting. */
 const W = 8;
 const H = 6;
+/** A path that doubles back, so one good spot can watch two stretches of it. */
 const PATH = [
   0, 1, 2, 3, 4, 5, 6, 7,
   15, 23,
@@ -43,7 +54,6 @@ const PATH = [
 const onPath = new Set(PATH);
 const KINDS: TowerKind[] = ["scarecrow", "beehive", "sprinkler"];
 
-/** Where a pest stands, in cell units, interpolating between path cells. */
 function posOf(at: number): { x: number; y: number } {
   const i = Math.min(Math.floor(at / STEPS), PATH.length - 1);
   const f = (at % STEPS) / STEPS;
@@ -57,87 +67,106 @@ function posOf(at: number): { x: number; y: number } {
 const pct = (n: number, of: number) => `${(n / of) * 100}%`;
 
 export default function FarmBoard() {
-  const [towers, setTowers] = useState<Tower[]>([]);
+  const [run, setRun] = useState<Run>(newRun);
   const [holding, setHolding] = useState<TowerKind>("scarecrow");
-  const [night, setNight] = useState(1);
+  /** the tower being looked at, which is where upgrading and selling happen */
+  const [picked, setPicked] = useState<number | null>(null);
 
-  /** the computed night, and where the playback has got to */
   const [result, setResult] = useState<NightResult | null>(null);
   const [frame, setFrame] = useState(0);
   const [speed, setSpeed] = useState(2);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const field: Field = useMemo(() => ({ w: W, h: H, path: PATH, towers }), [towers]);
-  const wave = useMemo(() => waveFor(night, 1), [night]);
+  const field: Field = useMemo(
+    () => ({ w: W, h: H, path: PATH, towers: run.towers }),
+    [run.towers]
+  );
+  const wave = useMemo(() => waveFor(run.night, 1), [run.night]);
 
   const nightfall = useCallback(() => {
-    const r = runNight(field, wave);
-    setResult(r);
+    setResult(runNight(field, wave));
     setFrame(0);
+    setPicked(null);
     setPlaying(true);
   }, [field, wave]);
 
-  /* Playback. The one loop in the game, and it decides nothing — dropping a
-     frame or backgrounding the tab cannot change the outcome. */
+  /* Playback. The only loop, and it decides nothing. */
   useEffect(() => {
     if (!playing || !result) return;
     timer.current = setInterval(() => {
       setFrame((f) => {
-        if (f + 1 >= result.frames.length) {
-          setPlaying(false);
-          return result.frames.length - 1;
-        }
+        if (f + 1 >= result.frames.length) { setPlaying(false); return result.frames.length - 1; }
         return f + 1;
       });
-    }, Math.max(16, 90 / speed));
+    }, Math.max(16, 110 / speed));
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [playing, result, speed]);
 
-  const place = (cell: number) => {
-    if (onPath.has(cell) || result) return;
-    setTowers((ts) =>
-      ts.some((t) => t.at === cell)
-        ? ts.filter((t) => t.at !== cell) // tap again to take it away
-        : [...ts, { at: cell, kind: holding }]
-    );
-  };
-
-  const reset = () => {
-    setResult(null);
-    setFrame(0);
-    setPlaying(false);
-  };
-
   const now = result?.frames[frame];
-  const shown = now?.motes ?? [];
-  const done = result !== null && frame >= result.frames.length - 1 && !playing;
+
+  /**
+   * The house flinches for a few frames after something gets in.
+   *
+   * Derived from how recently a leak happened rather than held in state and
+   * cleared by a timer: setting state from inside an effect to drive an
+   * animation is how cascading renders start, and the lint here rightly
+   * refuses it. This is a pure function of the frame on screen.
+   */
+  const flash = useMemo(() => {
+    if (!result) return false;
+    for (let i = frame; i >= 0 && i > frame - 6; i--) {
+      if (result.frames[i]?.leaked.length) return true;
+    }
+    return false;
+  }, [result, frame]);
 
   /**
    * What has happened up to the frame on screen.
    *
-   * Counted from the replay rather than read off the result, because the
-   * result is the *end* of the night and showing it early would give the
-   * ending away on the first frame. A pest is gone by frame f if it was on
-   * the field earlier and is not now; it leaked if it had got near the house.
+   * Summed from what each frame reports rather than guessed from pests going
+   * missing — the first version worked it out by how far along a vanished pest
+   * had been, which is a guess in the one place the replay has to agree with
+   * the result exactly.
    */
   const soFar = useMemo(() => {
     if (!result) return { killed: 0, leaked: 0 };
-    const seen = new Map<number, number>(); // id → furthest step seen
-    for (let i = 0; i <= frame && i < result.frames.length; i++) {
-      for (const m of result.frames[i].motes) seen.set(m.id, m.at);
-    }
-    const here = new Set((result.frames[frame]?.motes ?? []).map((m) => m.id));
     let killed = 0, leaked = 0;
-    const end = PATH.length * STEPS;
-    for (const [id, at] of seen) {
-      if (here.has(id)) continue;
-      // it left the field: near the end means it got in, otherwise it died
-      if (at >= end - 12) leaked++;
-      else killed++;
+    for (let i = 0; i <= frame && i < result.frames.length; i++) {
+      killed += result.frames[i].died.length;
+      leaked += result.frames[i].leaked.length;
     }
     return { killed, leaked };
   }, [result, frame]);
+
+  const done = result !== null && frame >= result.frames.length - 1 && !playing;
+  const lost = done && result !== null && run.lives - result.leaked <= 0;
+
+  const carryOn = () => {
+    if (!result) return;
+    setRun((r) => settle(r, result));
+    setResult(null);
+    setFrame(0);
+  };
+
+  const startOver = () => {
+    setRun(newRun());
+    setResult(null);
+    setFrame(0);
+    setPicked(null);
+  };
+
+  const tap = (cell: number) => {
+    if (result) return;
+    if (run.towers.some((t) => t.at === cell)) { setPicked(picked === cell ? null : cell); return; }
+    setPicked(null);
+    setRun((r) => build(r, cell, holding, PATH));
+  };
+
+  const chosen = picked === null ? null : run.towers.find((t) => t.at === picked) ?? null;
+  const shown = now?.motes ?? [];
+  /** ids hit on this tick, so a hit reads as a hit */
+  const struck = new Set(now?.shots.map((s) => s.to) ?? []);
 
   return (
     <div className="sheet">
@@ -146,7 +175,7 @@ export default function FarmBoard() {
           <h1>Smallholding</h1>
           <div className="titlerow">
             <span className="strapline">A farm by day, a siege by night</span>
-            <span className="pill-num">NIGHT {night}</span>
+            <span className="pill-num">NIGHT {run.night}</span>
           </div>
         </div>
         <div className="badges">
@@ -157,36 +186,54 @@ export default function FarmBoard() {
       <details className="disclosure noprint">
         <summary>
           <span className="chev" />
-          What this is
+          How to play
         </summary>
         <div className="disclosure-body">
           <p className="intro">
-            An early look at the night half. Stand things on the ground — they cost nothing yet —
-            then send the night in and watch what happens. Tap a tower again to take it away.
+            Pests come through the gate each night and walk to your house. Stand things in their
+            way. Tap bare ground to build, tap what you built to <b>upgrade</b> it or <b>sell</b> it
+            back for half. Everything costs money, and money is the whole game.
           </p>
           <p className="intro">
-            The night is worked out in full the moment you send it, so the speed control and the
-            skip cannot change the result: they only decide how fast you find out. That is the
-            whole design. The farm, the money and the crops come next, and only if watching this
-            turns out to be worth doing.
+            A scarecrow is steady, a beehive hits hard and slowly, a sprinkler barely hurts anything
+            but holds pests still in front of the other two. The path doubles back, so one good spot
+            can cover two stretches of it.
+          </p>
+          <p className="intro">
+            When you send the night in it is worked out in full at once, so pause, speed and skip
+            only change how fast you find out — never what happens. Each pest that reaches the house
+            costs a life, and the run ends at none.
           </p>
         </div>
       </details>
 
-      <div className="fm-pick noprint">
-        {KINDS.map((k) => (
-          <button
-            key={k}
-            className={"fm-kind" + (holding === k ? " on" : "")}
-            onClick={() => setHolding(k)}
-            aria-pressed={holding === k}
-            disabled={result !== null}
-          >
-            <span className={"fm-glyph " + k} aria-hidden="true" />
-            {TOWERS[k].name}
-          </button>
-        ))}
+      <div className="fm-purse">
+        <span className="fm-coins">{run.coins}<i>coins</i></span>
+        <span className="fm-lives" aria-label={`${run.lives} lives left`}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <span key={i} className={"fm-heart" + (i < run.lives ? " on" : "")} aria-hidden="true" />
+          ))}
+        </span>
+        <span className="fm-sent">night {run.night} sends {wave.length}</span>
       </div>
+
+      {!result && !run.over && (
+        <div className="fm-pick noprint">
+          {KINDS.map((k) => (
+            <button
+              key={k}
+              className={"fm-kind" + (holding === k ? " on" : "")}
+              onClick={() => { setHolding(k); setPicked(null); }}
+              aria-pressed={holding === k}
+              disabled={run.coins < TOWERS[k].cost}
+            >
+              <span className={"fm-glyph " + k} aria-hidden="true" />
+              {TOWERS[k].name}
+              <b>{TOWERS[k].cost}</b>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div
         className="fm-field"
@@ -204,52 +251,84 @@ export default function FarmBoard() {
           ))}
         </div>
 
-        {/* the gate and the house, so the direction of travel is obvious */}
-        <span className="fm-end gate" style={{ left: pct(PATH[0] % W, W), top: pct(Math.floor(PATH[0] / W), H), width: pct(1, W), height: pct(1, H) }}>in</span>
-        <span className="fm-end house" style={{ left: pct(PATH[PATH.length - 1] % W, W), top: pct(Math.floor(PATH[PATH.length - 1] / W), H), width: pct(1, W), height: pct(1, H) }}>home</span>
+        <span className="fm-end gate"
+          style={{ left: pct(PATH[0] % W, W), top: pct(Math.floor(PATH[0] / W), H), width: pct(1, W), height: pct(1, H) }}>in</span>
+        <span className={"fm-end house" + (flash ? " struck" : "")}
+          style={{ left: pct(PATH[PATH.length - 1] % W, W), top: pct(Math.floor(PATH[PATH.length - 1] / W), H), width: pct(1, W), height: pct(1, H) }}>home</span>
 
-        {/* the towers */}
-        {towers.map((t) => (
+        {/* what the tower you tapped can actually see */}
+        {chosen && !result && (
+          <span
+            className="fm-reach"
+            aria-hidden="true"
+            style={{
+              left: pct((chosen.at % W) - statsOf(chosen).range, W),
+              top: pct(Math.floor(chosen.at / W) - statsOf(chosen).range, H),
+              width: pct(statsOf(chosen).range * 2 + 1, W),
+              height: pct(statsOf(chosen).range * 2 + 1, H),
+            }}
+          />
+        )}
+
+        {run.towers.map((t) => (
           <button
             key={t.at}
-            className={"fm-tower " + t.kind}
+            className={
+              "fm-tower " + t.kind +
+              (picked === t.at ? " on" : "") +
+              (now?.shots.some((s) => s.from === t.at) ? " firing" : "")
+            }
             style={{ left: pct(t.at % W, W), top: pct(Math.floor(t.at / W), H), width: pct(1, W), height: pct(1, H) }}
-            onClick={() => place(t.at)}
+            onClick={() => tap(t.at)}
             disabled={result !== null}
-            aria-label={`${TOWERS[t.kind].name}, row ${Math.floor(t.at / W) + 1} column ${(t.at % W) + 1}`}
+            aria-label={`${TOWERS[t.kind].name} level ${t.level}, row ${Math.floor(t.at / W) + 1} column ${(t.at % W) + 1}`}
           >
             <span className={"fm-glyph " + t.kind} aria-hidden="true" />
+            <span className="fm-level" aria-hidden="true">
+              {Array.from({ length: t.level }, (_, i) => <i key={i} />)}
+            </span>
           </button>
         ))}
 
-        {/* free ground, tappable while the sun is up */}
-        {!result &&
+        {!result && !run.over &&
           Array.from({ length: W * H }, (_, c) =>
-            onPath.has(c) || towers.some((t) => t.at === c) ? null : (
+            onPath.has(c) || run.towers.some((t) => t.at === c) ? null : (
               <button
                 key={c}
-                className="fm-plot"
+                className={"fm-plot" + (run.coins >= TOWERS[holding].cost ? " can" : "")}
                 style={{ left: pct(c % W, W), top: pct(Math.floor(c / W), H), width: pct(1, W), height: pct(1, H) }}
-                onClick={() => place(c)}
+                onClick={() => tap(c)}
                 aria-label={`empty ground, row ${Math.floor(c / W) + 1} column ${(c % W) + 1}`}
               />
             )
           )}
 
-        {/* the pests, wherever the current frame says they are */}
         {shown.map((m) => {
           const p = posOf(m.at);
+          const full = Math.max(PESTS[m.kind].hp, m.hp);
           return (
             <span
               key={m.id}
-              className={"fm-pest " + m.kind + (m.slowed ? " slowed" : "")}
+              className={"fm-pest " + m.kind + (m.slowed ? " slowed" : "") + (struck.has(m.id) ? " struck" : "")}
               style={{ left: pct(p.x, W), top: pct(p.y, H), width: pct(1, W), height: pct(1, H) }}
               aria-hidden="true"
-            />
+            >
+              <i className="fm-hp" style={{ width: `${Math.max(0, (m.hp / full) * 100)}%` }} />
+            </span>
           );
         })}
 
-        {/* what fired this tick */}
+        {/* something dying should be seen, not merely absent next frame */}
+        {now?.died.map((id) => {
+          const was = result?.frames[Math.max(0, frame - 1)].motes.find((m) => m.id === id);
+          if (!was) return null;
+          const p = posOf(was.at);
+          return (
+            <span key={"d" + id} className="fm-gone" aria-hidden="true"
+              style={{ left: pct(p.x, W), top: pct(p.y, H), width: pct(1, W), height: pct(1, H) }} />
+          );
+        })}
+
         {now?.shots.map((s, i) => {
           const target = shown.find((m) => m.id === s.to);
           if (!target) return null;
@@ -263,78 +342,77 @@ export default function FarmBoard() {
         })}
       </div>
 
-      {result ? (
-        <div className="fm-tools noprint">
-          <button className="tool" onClick={() => setPlaying((p) => !p)} disabled={done}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button
-            className="tool"
-            onClick={() => setSpeed((s) => (s >= 8 ? 1 : s * 2))}
-            disabled={done}
-          >
-            {speed}× speed
-          </button>
-          <button
-            className="tool"
-            onClick={() => { setPlaying(false); setFrame(result.frames.length - 1); }}
-            disabled={done}
-          >
-            Skip
-          </button>
-        </div>
-      ) : (
-        <div className="fm-tools noprint">
-          <button className="tool" onClick={nightfall} disabled={towers.length === 0}>
-            Send in the night
-          </button>
-          <button className="tool" onClick={() => setTowers([])} disabled={!towers.length}>
-            Clear the field
-          </button>
+      {chosen && !result && (
+        <div className="fm-said">
+          <span>
+            <b>{TOWERS[chosen.kind].name}</b> level {chosen.level} · hits {statsOf(chosen).damage},
+            reaches {statsOf(chosen).range}
+          </span>
+          <span className="fm-act">
+            {upgradeCost(chosen) !== null ? (
+              <button
+                className="tool"
+                onClick={() => setRun((r) => upgrade(r, chosen.at))}
+                disabled={run.coins < (upgradeCost(chosen) ?? Infinity)}
+              >
+                Upgrade · {upgradeCost(chosen)}
+              </button>
+            ) : (
+              <span className="fm-max">as good as it gets</span>
+            )}
+            <button className="tool" onClick={() => { setRun((r) => sell(r, chosen.at)); setPicked(null); }}>
+              Sell · {sellValue(chosen)}
+            </button>
+          </span>
         </div>
       )}
+
+      <div className="fm-tools noprint">
+        {!result ? (
+          <button className="tool" onClick={nightfall} disabled={run.over}>
+            Send in the night
+          </button>
+        ) : (
+          <>
+            <button className="tool" onClick={() => setPlaying((p) => !p)} disabled={done}>
+              {playing ? "Pause" : "Play"}
+            </button>
+            <button className="tool" onClick={() => setSpeed((s) => (s >= 8 ? 1 : s * 2))} disabled={done}>
+              {speed}× speed
+            </button>
+            <button className="tool" onClick={() => { setPlaying(false); setFrame(result.frames.length - 1); }} disabled={done}>
+              Skip
+            </button>
+            {done && !lost && (
+              <button className="tool" onClick={carryOn}>
+                Morning · +{result.earned + STIPEND}
+              </button>
+            )}
+            {done && lost && <button className="tool" onClick={startOver}>Try again</button>}
+          </>
+        )}
+      </div>
 
       <div className="status">
         <span>
           {result
-            ? `Tick ${now?.tick ?? 0} of ${result.frames.length - 1} · ${shown.length} still coming`
-            : `${towers.length} standing · night ${night} sends ${wave.length}`}
+            ? `Tick ${now?.tick ?? 0} of ${result.frames.length - 1} · ${shown.length} still out there`
+            : `${run.towers.length} standing · ${nightsSurvived(run)} nights survived`}
         </span>
-        {/* The outcome is known the moment the night is sent, but saying so
-            while it plays would give the ending away on the first frame — which
-            is the one thing that would make watching pointless. Until the
-            replay is done, this counts what has happened *so far*. */}
         <span>
-          {!result
-            ? "tap the ground"
-            : done
-              ? `${result.killed} stopped, ${result.leaked} got through`
-              : `${soFar.killed} stopped, ${soFar.leaked} got through`}
+          {result
+            ? `${soFar.killed} stopped, ${soFar.leaked} got through`
+            : "tap the ground to build"}
         </span>
       </div>
 
       {done && result && (
         <div className="win show">
-          {result.held
-            ? `Nothing got through. ${result.killed} stopped.`
-            : `${result.leaked} got through. ${result.killed} stopped.`}
-        </div>
-      )}
-
-      {done && (
-        <div className="fm-tools noprint">
-          <button className="tool" onClick={() => { reset(); setNight((n) => n + 1); }}>
-            On to night {night + 1}
-          </button>
-          <button className="tool" onClick={reset}>
-            Same night again
-          </button>
-          <button
-            className="tool"
-            onClick={() => { reset(); setNight(1); setTowers([]); }}
-          >
-            Start over
-          </button>
+          {lost
+            ? `They got in. You lasted ${nightsSurvived(run) + 1} nights.`
+            : result.held
+              ? `Nothing got through. ${result.killed} stopped, ${result.earned} coins earned.`
+              : `${result.leaked} got through. ${result.killed} stopped, ${result.earned} coins earned.`}
         </div>
       )}
 
