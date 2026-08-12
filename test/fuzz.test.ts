@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import * as J from "../src/games/jigsaw/engine.ts";
 import * as W from "../src/games/wordtray/engine.ts";
 import * as B from "../src/games/blocks/engine.ts";
+import * as S from "../src/games/water/engine.ts";
 
 /**
  * Random play against the engines, checking the things that must never stop
@@ -208,5 +209,50 @@ test("undo walks all the way back to the start", () => {
       [...start.blocks].sort((a, b) => a.id - b.id),
       `${p.id}: undo did not restore the board`
     );
+  }
+});
+
+/* ── water sort ───────────────────────────────────────────────────────────── */
+
+const water: S.Puzzle[] = JSON.parse(readFileSync("src/data/water.json", "utf8"));
+
+test("pouring never loses or invents a unit of colour", () => {
+  /*
+   * The invariant the whole game rests on. A pour that dropped a unit, or made
+   * one, would leave a board that cannot be finished — and it would look like
+   * bad luck rather than a bug.
+   */
+  const census = (tubes: number[][]) => {
+    const n = new Map<number, number>();
+    for (const t of tubes) for (const v of t) n.set(v, (n.get(v) ?? 0) + 1);
+    return [...n.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${v}`).join(",");
+  };
+
+  for (let seed = 0; seed < 40; seed++) {
+    const r = rng(8000 + seed);
+    const p = pick(r, water);
+    let s = S.initialState(p);
+    const want = census(p.tubes);
+
+    for (let move = 0; move < 300; move++) {
+      const a = Math.floor(r() * s.tubes.length);
+      const b = Math.floor(r() * s.tubes.length);
+      s = r() < 0.12 ? S.undo(s) : S.pour(s, a, b);
+
+      assert.equal(census(s.tubes), want, `${p.id}: colour appeared or vanished`);
+      assert.equal(s.tubes.length, p.tubes.length, `${p.id}: a tube came or went`);
+      for (const t of s.tubes) {
+        assert.ok(t.length <= S.DEPTH, `${p.id}: a tube overfilled to ${t.length}`);
+      }
+      assert.ok(s.moves >= 0, `${p.id}: negative pours`);
+      if (S.isSolved(s)) assert.ok(!S.stuck(s), `${p.id}: solved and stuck at once`);
+    }
+
+    /* however messy it got, undo returns the deal exactly */
+    while (s.moves > 0) s = S.undo(s);
+    assert.deepEqual(s.tubes, p.tubes, `${p.id}: undo did not restore the deal`);
+
+    const back = S.initialState(p, S.toSave(s));
+    assert.deepEqual(back.tubes, s.tubes, `${p.id}: tubes lost in the save`);
   }
 });

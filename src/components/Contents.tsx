@@ -6,7 +6,7 @@ import AuthBar from "@/components/AuthBar";
 import Mark from "@/components/Mark";
 import { SITE } from "@/lib/site";
 import { lastUnfinished, loadSolvedSet, type Bookmark } from "@/lib/progress";
-import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
+import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, waterSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
 import { stamps, earnedCount, nearest, share, type Stamp } from "@/lib/achievements";
 
 import codeword from "@/data/codeword.json";
@@ -17,6 +17,7 @@ import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
 import wordtray from "@/data/wordtray.json";
 import jigsaw from "@/data/jigsaw.json";
+import water from "@/data/water.json";
 
 /**
  * The contents page — design 6a, and 6b on a phone.
@@ -41,6 +42,7 @@ type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
 type WT = { id: string; letters: string; w: number; h: number };
 type JS = { id: string; given: number[]; regions: number[] };
+type WS = { id: string; tubes: number[][]; colours: number };
 type BL = {
   id: string;
   blocks: { x: number; y: number; w: number; h: number }[];
@@ -54,6 +56,7 @@ const slSlot = slideSlot;
 const cgSlot = cryptogramSlot;
 const wtSlot = wordtraySlot;
 const jsSlot = jigsawSlot;
+const wsSlot = waterSlot;
 const blSlot = blocksSlot;
 
 type Entry = {
@@ -77,6 +80,7 @@ const ROUTE: Record<string, string> = {
   blockout: "/games/blockout",
   wordtray: "/games/wordtray",
   jigsaw: "/games/jigsaw",
+  water: "/games/water",
 };
 
 const LABEL: Record<string, string> = {
@@ -90,6 +94,7 @@ const LABEL: Record<string, string> = {
   blockout: "Block Out!",
   wordtray: "Word Tray",
   jigsaw: "Jigsaw Sudoku",
+  water: "Water Sort",
 };
 
 /**
@@ -121,7 +126,7 @@ export default function Contents() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, wt, js] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, wt, js, ws] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
@@ -130,6 +135,7 @@ export default function Contents() {
         loadSolvedSet("blocks"),
         loadSolvedSet("wordtray"),
         loadSolvedSet("jigsaw"),
+        loadSolvedSet("water"),
       ]);
       if (!alive) return;
 
@@ -205,6 +211,12 @@ export default function Contents() {
           blurb: "Sudoku with the nine boxes cut into nine shapes. Every board can be reasoned to the end without a guess.",
           total: jigsaw.length, done: count(jigsaw as JS[], js, jsSlot),
         },
+        {
+          num: "11", name: "Water Sort", href: ROUTE.water,
+          count: `${water.length} boards`,
+          blurb: "Pour colour between tubes until each holds one. Every board's shortest route is known before it ships.",
+          total: water.length, done: count(water as WS[], ws, wsSlot),
+        },
       ]);
 
       setMark(lastUnfinished());
@@ -219,8 +231,9 @@ export default function Contents() {
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
             { id: "wordtray", name: "Word Tray", puzzles: wordtray as WT[], slotOf: (p) => wtSlot(p as WT) },
             { id: "jigsaw", name: "Jigsaw Sudoku", puzzles: jigsaw as JS[], slotOf: (p) => jsSlot(p as JS) },
+            { id: "water", name: "Water Sort", puzzles: water as WS[], slotOf: (p) => wsSlot(p as WS) },
           ],
-          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...wt, ...js])
+          new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...wt, ...js, ...ws])
         )
       );
     })();
@@ -228,7 +241,7 @@ export default function Contents() {
   }, []);
 
   const total =
-    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length + wordtray.length + jigsaw.length;
+    codeword.length + wordgame.length + solveforx.length + slide.length + cryptogram.length + blocks.length + wordtray.length + jigsaw.length + water.length;
   const carryOn = mark ? `${ROUTE[mark.gameId] ?? "/"}?p=${encodeURIComponent(mark.puzzleId)}` : null;
   const going = nearest(badges);
   const here = mark ? entries?.find((e) => e.href === ROUTE[mark.gameId]) : null;

@@ -11,6 +11,7 @@ import {
   slideSlot,
   solveforxSlot,
   wordgameSlot,
+  waterSlot,
   wordtraySlot,
 } from "../src/lib/slots.ts";
 import { gameOf } from "../src/lib/slot.ts";
@@ -29,6 +30,7 @@ const ARCHIVES = [
   { game: "blocks", rows: load("blocks"), slotOf: blocksSlot },
   { game: "wordtray", rows: load("wordtray"), slotOf: wordtraySlot },
   { game: "jigsaw", rows: load("jigsaw"), slotOf: jigsawSlot },
+  { game: "water", rows: load("water"), slotOf: waterSlot },
 ] as { game: string; rows: { id: string }[]; slotOf: (p: never) => string }[];
 
 test("every archive's slots name the game they came from", () => {

@@ -64,6 +64,9 @@ export const wordtraySlot = (p: { id: string; w: number; h: number; letters: str
 export const jigsawSlot = (p: { id: string; given: number[]; regions: number[] }) =>
   slotKey("jigsaw", p.id, fingerprint([p.given], p.regions.join("")));
 
+export const waterSlot = (p: { id: string; tubes: number[][]; colours: number }) =>
+  slotKey("water", p.id, fingerprint(p.tubes, String(p.colours)));
+
 /* ── the runs ─────────────────────────────────────────────────────────────────
    These two have no archive to count against, so nothing outside the board
    builds their slot. They live here anyway so that the rule of "slots are

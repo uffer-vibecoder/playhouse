@@ -8,7 +8,7 @@ import Together from "@/components/Together";
 import StatShape, { Headline } from "@/components/StatShape";
 import { SITE } from "@/lib/site";
 import { loadGameSaves, loadResults, loadSolvedSet } from "@/lib/progress";
-import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
+import { blocksSlot, codewordSlot, cryptogramSlot, jigsawSlot, waterSlot, slideSlot, solveforxSlot, wordgameSlot, wordtraySlot } from "@/lib/slots";
 import {
   codewordRecord,
   playerRecord,
@@ -28,6 +28,7 @@ import slide from "@/data/slide.json";
 import cryptogram from "@/data/cryptogram.json";
 import blocks from "@/data/blocks.json";
 import jigsaw from "@/data/jigsaw.json";
+import water from "@/data/water.json";
 import wordtray from "@/data/wordtray.json";
 
 /**
@@ -49,6 +50,7 @@ type Seeded = { id: string; seed: number };
 type WG = { id: string; answer: string };
 type CG = { id: string; key: string };
 type JS = { id: string; given: number[]; regions: number[] };
+type WS = { id: string; tubes: number[][]; colours: number };
 type WT = { id: string; letters: string; w: number; h: number };
 type BL = {
   id: string;
@@ -62,6 +64,7 @@ const sxSlot = solveforxSlot;
 const slSlot = slideSlot;
 const cgSlot = cryptogramSlot;
 const jsSlot = jigsawSlot;
+const wsSlot = waterSlot;
 const wtSlot = wordtraySlot;
 const blSlot = blocksSlot;
 
@@ -73,7 +76,7 @@ export default function Record() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [cw, wg, sx, sl, cg, bl, wt, js, faRuns, boRuns, wgSaves, sxSaves, results] = await Promise.all([
+      const [cw, wg, sx, sl, cg, bl, wt, js, ws, faRuns, boRuns, wgSaves, sxSaves, results] = await Promise.all([
         loadSolvedSet("codeword"),
         loadSolvedSet("wordgame"),
         loadSolvedSet("solveforx"),
@@ -82,6 +85,7 @@ export default function Record() {
         loadSolvedSet("blocks"),
         loadSolvedSet("wordtray"),
         loadSolvedSet("jigsaw"),
+        loadSolvedSet("water"),
         loadGameSaves<Record<string, unknown>>("freeatro"),
         loadGameSaves<Record<string, unknown>>("blockout"),
         loadGameSaves<{ guesses?: string[] }>("wordgame"),
@@ -129,9 +133,10 @@ export default function Record() {
         ),
         simpleRecord("wordtray", "09", "Word Tray", wordtray as WT[], wt, (p) => wtSlot(p as WT)),
         simpleRecord("jigsaw", "10", "Jigsaw Sudoku", jigsaw as JS[], js, (p) => jsSlot(p as JS)),
+        simpleRecord("water", "11", "Water Sort", water as WS[], ws, (p) => wsSlot(p as WS)),
       ]);
 
-      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + wt.size + js.size;
+      const finished = cw.size + wg.size + sx.size + sl.size + cg.size + bl.size + wt.size + js.size + ws.size;
       /* The times that were being written and never read.
          `recordResult` has stamped `elapsed_ms` on every finish since the
          results migration, and this page passed an empty array regardless — so
@@ -141,7 +146,7 @@ export default function Record() {
       const times = results.map((r) => r.elapsedMs).filter((ms): ms is number => ms !== null && ms > 0);
       setPlayer(playerRecord(finished, times));
 
-      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...wt, ...js]);
+      const solvedAll = new Set([...cw, ...wg, ...sx, ...sl, ...cg, ...bl, ...wt, ...js, ...ws]);
       setBadges(
         stamps(
           [
@@ -152,6 +157,7 @@ export default function Record() {
             { id: "cryptogram", name: "Cryptogram", puzzles: cryptogram as CG[], slotOf: (p) => cgSlot(p as CG) },
             { id: "blocks", name: "Colour Blocks", puzzles: blocks as BL[], slotOf: (p) => blSlot(p as BL) },
             { id: "jigsaw", name: "Jigsaw Sudoku", puzzles: jigsaw as JS[], slotOf: (p) => jsSlot(p as JS) },
+            { id: "water", name: "Water Sort", puzzles: water as WS[], slotOf: (p) => wsSlot(p as WS) },
             { id: "wordtray", name: "Word Tray", puzzles: wordtray as WT[], slotOf: (p) => wtSlot(p as WT) },
           ],
           solvedAll
