@@ -69,21 +69,23 @@ export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
         if (already !== null) return already;
         setRun((r) => {
           if (!r) return r;
-          const banked = bankRound(r, score);
+          const banked = bankRound(r, score, dealFor(r, deals).ceiling);
           void saveProgress<Run>(RUN_SLOT, GAME_ID, banked, false);
           return banked;
         });
         return score;
       });
     },
-    []
+    [deals]
   );
 
   const carryOn = () => {
     if (!run || justScored === null) return;
+    // the deal that was just played, not the next one
+    const played = dealFor(run, deals);
     // `targetFor` rather than the formula written out again: they matched, which
     // is exactly what makes a duplicate dangerous rather than obviously wrong
-    const cleared = justScored >= targetFor(run.round);
+    const cleared = justScored >= targetFor(run.round, played.ceiling);
     keep(cleared ? advanceRound(run) : newRun(Math.floor(Math.random() * deals.length)));
     setJustScored(null);
   };
@@ -104,6 +106,7 @@ export default function FreeAtroGame({ deals }: { deals: Deal[] }) {
         <Shop
           run={run}
           score={justScored}
+          ceiling={deal.ceiling}
           onBuy={(id: Upgrade) => keep(buy(run, id))}
           onNext={carryOn}
         />

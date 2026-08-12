@@ -1,5 +1,11 @@
 import { test } from "node:test";
+
+/** The shipped deals, each carrying the most it can pay. */
+const archive: { id: string; seed: number; ceiling?: number }[] = JSON.parse(
+  readFileSync("src/data/freeatro.json", "utf8")
+);
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   CELLS,
   COLUMNS,
@@ -20,6 +26,7 @@ import {
   bankRound,
   advanceRound,
   purse,
+  shareFor,
   targetFor,
   buy,
   owned,
@@ -369,21 +376,60 @@ test("a round-one shop has something to spend, which it never used to", () => {
 
 /* ── the retuned curve ────────────────────────────────────────────────────── */
 
-test("the target climbs and never repeats", () => {
-  const targets = [1, 2, 3, 4, 5, 6, 7].map(targetFor);
-  for (let i = 1; i < targets.length; i++) assert.ok(targets[i] > targets[i - 1]);
+test("the target climbs, then stops climbing on purpose", () => {
+  const ceiling = 563; // the median deal
+  const targets = [1, 2, 3, 4, 5, 6, 7].map((r) => targetFor(r, ceiling));
+  for (let i = 1; i < targets.length; i++) {
+    assert.ok(targets[i] >= targets[i - 1], `round ${i + 1} asks for less than round ${i}`);
+  }
+  // and it stops. A target that kept climbing would eventually ask for more
+  // than the deal can pay, which is exactly the bug this replaced.
+  assert.equal(shareFor(20), 0.95);
+  assert.ok(targetFor(20, ceiling) < ceiling);
 });
 
-test("winning by accident does not clear a round", () => {
-  // measured over all sixty deals by replaying the solver's route through this
-  // same scoring code — see scripts/tune-freeatro.mjs
+test("no target ever asks for more than the deal can pay", () => {
+  /*
+   * The bug this whole design replaced. The target used to be a flat number —
+   * 560 at round one — while the ceiling measured across the archive runs 411
+   * to 925. The median deal's absolute maximum was 563, so about half of them
+   * could not be cleared in round one however well they were played, and
+   * nothing said so: the round just ended.
+   */
+  for (const d of archive) {
+    assert.ok(typeof d.ceiling === "number", `${d.id} has no measured ceiling`);
+    for (let round = 1; round <= 12; round++) {
+      assert.ok(
+        targetFor(round, d.ceiling) < d.ceiling!,
+        `${d.id}: round ${round} asks ${targetFor(round, d.ceiling)} of a deal that can pay ${d.ceiling}`
+      );
+    }
+  }
+});
+
+test("the target follows the deal, not just the round", () => {
+  // two deals, same round, different asks — that is the whole point
+  const easy = 411, rich = 925;
+  assert.ok(targetFor(1, easy) < targetFor(1, rich));
+  assert.equal(targetFor(1, easy), Math.round(easy * 0.7));
+});
+
+test("round one is about what a careless win pays, and round seven is not", () => {
+  /*
+   * Measured: replaying the solver's route — a win with no tableau care at all
+   * — pays a median of 399, and a wide beam search playing close to perfectly
+   * pays a median of 563. That is only 1.6× between bad and near-perfect, so
+   * the band a target can sit in is narrow, and a careless win is already
+   * about 71% of the ceiling.
+   *
+   * So round one deliberately sits about there. The earlier curve tried to put
+   * round one clear of a careless win and ended up above what most deals could
+   * pay at all. The ramp does the work instead.
+   */
+  const ceiling = 563;
   const carelessMedian = 399;
-  const carelessUpperQuartile = 446;
-  assert.ok(
-    targetFor(1) > carelessUpperQuartile,
-    `round one at ${targetFor(1)} is inside the range a careless win reaches`
-  );
-  assert.ok(targetFor(1) > carelessMedian * 1.35, "and comfortably past the median of one");
+  assert.ok(Math.abs(targetFor(1, ceiling) - carelessMedian) < 60, "round one is a fair start");
+  assert.ok(targetFor(7, ceiling) > carelessMedian * 1.25, "round seven is not");
 });
 
 /* ── picking up from a card ───────────────────────────────────────────────── */

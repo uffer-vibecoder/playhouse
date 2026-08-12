@@ -62,7 +62,7 @@ export default function FreeAtroBoard({
   const timer = useTimer(slot);
   const { stop: stopTimer, ms: elapsed } = timer;
   const restoring = restoredSlot !== slot;
-  const target = targetFor(run.round);
+  const target = targetFor(run.round, deal.ceiling);
 
   useEffect(() => {
     let alive = true;

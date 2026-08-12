@@ -51,6 +51,12 @@ export const CELLS = 4;
 export const ROUND_RANKS = 8;
 
 export type Deal = {
+  /**
+   * The most a very good line can score on this deal, measured by
+   * `scripts/ceiling-freeatro.mjs`. Optional only so an archive written before
+   * it existed still parses; `targetFor` falls back to the median.
+   */
+  ceiling?: number;
   id: string;
   seed: number;
   /** ranks per suit in this deal, ace upwards */
@@ -104,36 +110,44 @@ export const cellsFor = (run: Run) => CELLS + owned(run, "cell");
 export const baseMult = (run: Run) => 1 + owned(run, "mult");
 
 /**
- * What this round has to beat.
+ * What this round has to beat — a share of what *this deal* can pay.
  *
- * Every card comes home in a won round, so the chips are fixed at 144 — four
- * suits of 1+2+…+8. A target is therefore a statement about multiplier, not
- * about luck.
+ * ── The two things that were wrong ──────────────────────────────────────────
  *
- * **Measured, after the first curve was wrong by a factor of three.** That one
- * was reasoned from an estimate of "about two on average" and set round one at
- * 240; the first real game cleared it with 697. `scripts/tune-freeatro.mjs`
- * replays the solver's route through this same scoring code to find what a
- * *careless* win pays — a game won with no tableau care at all — across all
- * sixty deals:
+ * The curve used to be a flat number per round, 560 at round one, set from a
+ * measured *careless* win on the assumption that careful play scores far more.
+ * Both halves were wrong.
  *
- *     low 306 · q1 365 · median 399 · q3 446 · high 706 · mean 416
+ * It does not score far more. Measured across all sixty deals with a wide beam
+ * search — a machine playing close to perfectly — against the solver's route:
  *
- * So the old 240 sat *below* the median of winning by accident — round one
- * cleared itself about half the time. 560 sits clear of the upper quartile,
- * which is the point: **winning alone must not clear a round.**
+ *     careless win     median 399
+ *     near-perfect     median 563
  *
- * The step of 70 puts round six at 910, past anything a careless game reaches,
- * so a run has to be carried by upgrades and by keeping runs standing while you
- * dig. A single Head start is worth about +144, since it raises the multiplier
- * under every one of those fixed chips.
+ * That is 1.6× between playing badly and playing about as well as it can be
+ * played, so a target has only a narrow band to sit in. A careless win is
+ * already about 71% of the ceiling.
  *
- * (An earlier measurement gave a median of 206. That was taken while a
- * completed suit paid no multiplier at all — `f === 12`, the king, on a deck
- * whose top card is an eight. Fixing that roughly doubled every score, which is
- * why these numbers are the ones that count.)
+ * And the ceiling is not the same from deal to deal. It runs **411 to 925**,
+ * a spread of 2.3×. A single fixed number against that is a lottery, not a
+ * difficulty: at 560, the median deal's absolute maximum was 563, so roughly
+ * half of them could not be cleared in round one however well they were
+ * played. Nothing said so — the round simply ended.
+ *
+ * So the target is a share of this deal's own ceiling, and the share is what
+ * rises. Round one asks for about what a careless win pays, and by round seven
+ * it asks for nearly everything the deal has.
+ *
+ * The ceiling is what a *machine* found, so the shares stay well under it.
  */
-export const targetFor = (round: number) => 560 + (round - 1) * 70;
+const MEDIAN_CEILING = 563;
+
+/** The share of a deal's ceiling a round asks for. Capped: a target above what
+ *  the deal can pay is the bug this whole note is about. */
+export const shareFor = (round: number) => Math.min(0.7 + 0.04 * (round - 1), 0.95);
+
+export const targetFor = (round: number, ceiling = MEDIAN_CEILING) =>
+  Math.round(ceiling * shareFor(round));
 
 /**
  * Coins for a finished round.
@@ -142,9 +156,10 @@ export const targetFor = (round: number) => 560 + (round - 1) * 70;
  * whatever deeper pockets adds. A round that misses its target pays nothing —
  * the purse rewards clearing a round, not turning up to one.
  */
-export function purse(run: Run, score: number, round: number): number {
-  if (score < targetFor(round)) return 0;
-  return 3 + Math.floor((score - targetFor(round)) / 50) + owned(run, "purse");
+export function purse(run: Run, score: number, round: number, ceiling?: number): number {
+  const target = targetFor(round, ceiling);
+  if (score < target) return 0;
+  return 3 + Math.floor((score - target) / 50) + owned(run, "purse");
 }
 
 /** Buy one, if it is affordable and not already maxed. */
@@ -178,11 +193,11 @@ export const dealFor = (run: Run, deals: Deal[]) =>
  * remounts the board on an already-won round and fires the win again, which
  * would otherwise pay it out twice.
  */
-export function bankRound(run: Run, score: number): Run {
+export function bankRound(run: Run, score: number, ceiling?: number): Run {
   if (run.scores.length >= run.round) return run;
   return {
     ...run,
-    coins: run.coins + purse(run, score, run.round),
+    coins: run.coins + purse(run, score, run.round, ceiling),
     scores: [...run.scores, score],
   };
 }

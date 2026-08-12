@@ -17,17 +17,20 @@ import { UPGRADES, owned, purse, targetFor, type Run } from "./engine";
 export default function Shop({
   run,
   score,
+  ceiling,
   onBuy,
   onNext,
 }: {
   run: Run;
   score: number;
+  /** what the deal just played could have paid — the target is a share of it */
+  ceiling?: number;
   onBuy: (id: (typeof UPGRADES)[number]["id"]) => void;
   onNext: () => void;
 }) {
-  const target = targetFor(run.round);
+  const target = targetFor(run.round, ceiling);
   const won = score >= target;
-  const earned = purse(run, score, run.round);
+  const earned = purse(run, score, run.round, ceiling);
 
   return (
     <div className="sheet fa-shop">
