@@ -1784,3 +1784,89 @@ footer{
   .ws-slot{min-height:20px; max-height:32px}
   .ws-band{background-size:14px 14px}
 }
+
+/* ── smallholding ────────────────────────────────────────────────────────────
+   A farm by day, a siege by night. Early: the night half only.
+
+   The field is the colour-block board's arrangement — a positioning box with an
+   aspect ratio from the field's own dimensions, a ruled grid behind, and
+   everything else absolutely positioned at percentage offsets. A pest sits at a
+   fractional cell, which the same percentage maths handles without any change.
+── */
+.fm-field{
+  container-type:inline-size;
+  position:relative; width:100%; max-width:var(--board); margin:14px auto 12px;
+  background:var(--tile); border:2px solid var(--ink); border-radius:12px;
+}
+.fm-cells{position:absolute; inset:0; display:grid}
+/* Free ground is paper; the track is worn earth. These are fixed rather than
+   themed, because which cells a pest walks along is the puzzle and not the
+   furniture — the same rule the block gates and the water bands follow.
+   The first pass used --tile against --underline and the field read as
+   stripes: the connectors between rows are single cells, so a weak contrast
+   makes a snaking path look like banding. */
+.fm-cell{background:#FFFFFF; border:1px solid var(--rule)}
+.fm-cell.track{background:#D8CBB4; border-color:#B9A88C}
+
+.fm-end{
+  position:absolute; display:grid; place-items:center; pointer-events:none;
+  font-family:var(--ui); font-size:clamp(7px, 2.2cqw, 10px); font-weight:700;
+  letter-spacing:.6px; text-transform:uppercase; color:var(--ink);
+}
+.fm-end.gate{background:var(--accent-tint)}
+.fm-end.house{background:var(--fill)}
+
+.fm-plot{
+  position:absolute; margin:0; padding:0; background:none; cursor:pointer;
+  border:1px dashed transparent; border-radius:4px;
+}
+.fm-plot:hover,.fm-plot:focus-visible{border-color:var(--fill-text); background:var(--fill-tint)}
+
+.fm-tower{
+  position:absolute; margin:0; padding:0; display:grid; place-items:center;
+  background:#FFFFFF; border:2px solid var(--ink); border-radius:6px;
+  cursor:pointer; transform:scale(.86);
+}
+.fm-tower:disabled{cursor:default}
+
+/* Each tower carries a shape as well as a fill, so the field reads in
+   greyscale — the same rule the colour-block gates and the water bands follow. */
+.fm-glyph{width:60%; height:60%; display:block; border:2px solid var(--ink)}
+.fm-glyph.scarecrow{background:#CFE0C8; border-radius:50%}
+.fm-glyph.beehive{background:#F0DFB8; border-radius:2px}
+.fm-glyph.sprinkler{background:#C7DAEE; border-radius:50% 50% 4px 4px; transform:rotate(45deg)}
+
+.fm-pest{
+  position:absolute; display:grid; place-items:center; pointer-events:none;
+  transition:left .07s linear, top .07s linear;
+}
+.fm-pest::after{
+  content:""; width:46%; height:46%; border:2px solid var(--ink); background:var(--accent);
+}
+.fm-pest.grub::after{border-radius:50%}
+.fm-pest.hopper::after{border-radius:50% 50% 2px 2px; background:#F7C9D8}
+.fm-pest.beetle::after{border-radius:3px; background:var(--accent-deep); width:58%; height:58%}
+.fm-pest.slowed::after{box-shadow:0 0 0 3px var(--fill)}
+
+.fm-shot{position:absolute; inset:0; pointer-events:none; overflow:visible}
+.fm-shot line{stroke:var(--ink); stroke-width:.05; opacity:.55; stroke-linecap:round}
+
+.fm-pick{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:12px 0 4px}
+.fm-kind{
+  display:flex; align-items:center; gap:8px; margin:0; padding:7px 14px;
+  border:2px solid var(--ink); border-radius:999px; background:#FFFFFF; cursor:pointer;
+  font-family:var(--ui); font-size:11px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--ink);
+}
+.fm-kind .fm-glyph{width:14px; height:14px; border-width:1.5px}
+.fm-kind.on{background:var(--fill)}
+.fm-kind:disabled{opacity:.5; cursor:default}
+
+.fm-tools{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:12px}
+.fm-tools .tool{flex:0 0 auto; min-width:104px}
+
+@media (prefers-reduced-motion:reduce){
+  /* the replay is motion by nature; the answer is that it is skippable and the
+     outcome is written out in words either way */
+  .fm-pest{transition:none}
+}
