@@ -1698,14 +1698,29 @@ footer{
    namespace on purpose, so neither game can drag the other's colours around.
 ── */
 .ws-board{
+  /* The column count is chosen per board size rather than left to wrap where
+     it likes: twelve tubes wrapped naturally to 9 + 3, which reads as a
+     mistake, and left the tubes small while most of the sheet sat empty. Six
+     and six is a board; nine and three is a spill. */
+  --cols:6; --gap:10px; --tube-max:92px;
   display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-end;
-  gap:16px 14px; margin:18px 0 14px;
+  gap:22px var(--gap); margin:18px auto 14px; width:100%;
+  max-width:calc(var(--cols) * var(--tube-max) + (var(--cols) - 1) * var(--gap));
 }
+.ws-board[data-n="7"]{--cols:7}
+.ws-board[data-n="8"]{--cols:8}
+.ws-board[data-n="10"]{--cols:5}
+.ws-board[data-n="12"]{--cols:6}
 .ws-tube{
   display:flex; flex-direction:column-reverse; justify-content:flex-start;
-  gap:2px; width:46px; padding:4px; margin:0;
+  /* fills the column it was given, up to a cap — so a seven-tube board uses
+     the room a twelve-tube board needs, instead of both being 64px */
+  flex:0 0 auto; min-width:0;
+  width:calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  max-width:var(--tube-max);
+  gap:3px; padding:5px; margin:0;
   border:2px solid var(--ink); border-top-width:1px;
-  border-radius:4px 4px 16px 16px; background:#FFFFFF; cursor:pointer;
+  border-radius:5px 5px 20px 20px; background:#FFFFFF; cursor:pointer;
   transition:transform .16s ease-out, box-shadow .16s ease-out;
 }
 /* the tube in hand lifts, and says so with more than height */
@@ -1717,11 +1732,11 @@ footer{
    part of the board, it just has nothing left to ask of you */
 .ws-tube.done{opacity:.5}
 .ws-tube:disabled{cursor:default}
-.ws-slot{height:24px; border-radius:3px}
+.ws-slot{aspect-ratio:8/5; min-height:24px; max-height:46px; border-radius:4px}
 .ws-band{
   background-color:var(--ws-fill);
   background-image:var(--ws-glyph);
-  background-repeat:no-repeat; background-position:center; background-size:11px 11px;
+  background-repeat:no-repeat; background-position:center; background-size:17px 17px;
   border:1px solid rgba(17,17,17,.22); border-radius:3px;
 }
 /* the unit that just arrived, so a pour reads as a movement rather than a jump */
@@ -1762,8 +1777,10 @@ footer{
 @media (max-width:560px){
   /* twelve tubes will not fit a phone in one row — 31px each is unusable — so
      the board wraps and the tubes stay big enough to hit */
-  .ws-board{gap:12px 8px}
-  .ws-tube{width:36px; padding:3px}
-  .ws-slot{height:20px}
-  .ws-band{background-size:9px 9px}
+  .ws-board{--gap:7px; --tube-max:56px; gap:18px var(--gap)}
+  /* a phone cannot hold seven across and stay readable, so it wraps sooner */
+  .ws-board[data-n="7"], .ws-board[data-n="8"]{--cols:4}
+  .ws-tube{padding:4px; gap:2px; border-radius:4px 4px 16px 16px}
+  .ws-slot{min-height:20px; max-height:32px}
+  .ws-band{background-size:14px 14px}
 }

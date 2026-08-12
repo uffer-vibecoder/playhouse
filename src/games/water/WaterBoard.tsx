@@ -247,7 +247,7 @@ export default function WaterBoard({
         </span>
       </div>
 
-      <div className="ws-board" role="group" aria-label={`${puzzle.tubes.length} tubes`}>
+      <div className="ws-board" data-n={state.tubes.length} role="group" aria-label={`${puzzle.tubes.length} tubes`}>
         {state.tubes.map((tube, i) => {
           const finished = tube.length === DEPTH && isPure(tube);
           /* while a tube is in hand, say which ones will take it — the rule is
