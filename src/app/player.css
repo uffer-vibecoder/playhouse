@@ -1518,7 +1518,11 @@ footer{
   .gridwrap{max-width:150mm; margin:0}
   /* the mark goes back to its fixed pane: themes never print */
   .markpane{fill:#F5A9C6}
-  .cell,.kbox,.tcell,.pill-no,.pill-num,.markpane,.theme-tag{print-color-adjust:exact; -webkit-print-color-adjust:exact}
+  .cell,.kbox,.tcell,.pill-no,.pill-num,.markpane,.theme-tag,.ws-band{print-color-adjust:exact; -webkit-print-color-adjust:exact}
+  /* .ws-band earns its place here: without it a printed board is ten tubes of
+     white. The glyphs are ink strokes and survive either way — which is the
+     neatest proof that putting a mark on every band, rather than one per run,
+     was the right call. */
   /* selection is a screen affordance — it should not print */
   .cell.word::before,.cell.same::after{display:none}
   .cell.sel{outline:none}

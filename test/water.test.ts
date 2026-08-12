@@ -220,3 +220,17 @@ test("a save holding different colours is refused", () => {
   const short = initialState(P, { tubes: [[0]], moves: 1 });
   assert.deepEqual(short.tubes, P.tubes, "and a save of the wrong shape too");
 });
+
+test("no board uses a colour the board has no hue for", () => {
+  /*
+   * Ten hues are defined. An eleventh colour would render a transparent band —
+   * an invisible, unsolvable puzzle rather than a visible failure — so the
+   * archive is held to ten here as well as clamped at the board.
+   */
+  for (const p of archive) {
+    assert.ok(p.colours <= 10, `${p.id} deals ${p.colours} colours`);
+    for (const t of p.tubes) {
+      for (const v of t) assert.ok(v >= 0 && v < 10, `${p.id}: colour ${v}`);
+    }
+  }
+});

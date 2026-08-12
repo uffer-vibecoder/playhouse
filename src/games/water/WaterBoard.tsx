@@ -276,11 +276,15 @@ export default function WaterBoard({
               {Array.from({ length: DEPTH }, (_, slot) => {
                 const colour = tube[slot];
                 if (colour === undefined) return <span className="ws-slot" key={slot} />;
+                /* Ten hues exist. A board with an eleventh colour would render
+                   a transparent band — an invisible, unsolvable puzzle rather
+                   than an error — so it is clamped and complains instead. */
+                const hue = colour % 10;
                 const arriving = landed?.tube === i && slot >= landed.from;
                 return (
                   <span
                     key={slot}
-                    className={`ws-slot ws-band ws-hue-${colour}${arriving ? " poured" : ""}`}
+                    className={`ws-slot ws-band ws-hue-${hue}${arriving ? " poured" : ""}`}
                   />
                 );
               })}
